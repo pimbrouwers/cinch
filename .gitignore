@@ -152,3 +152,9 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
+
+#==========================
+# Test App Ignores
+#==========================
+Cinch Test/
+Cinch Test Database/
