@@ -53,6 +53,7 @@
     <Compile Include="AccessLayer\Inflector.cs" />
     <Compile Include="AccessLayer\Mapper.cs" />
     <Compile Include="AccessLayer\Queries.cs" />
+    <Compile Include="AccessLayer\SpecialCharacters.cs" />
     <Compile Include="Attributes\CinchIgnore.cs" />
     <Compile Include="Extensions\ReflectionExtensions.cs" />
     <Compile Include="Extensions\SqlParameterCollectionExtensions.cs" />
