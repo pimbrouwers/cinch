@@ -169,13 +169,7 @@ namespace Cinch
         /// <returns></returns>
         public bool Exists()
         {
-            string query = @"
-                SELECT COUNT(*) 
-                FROM {0} as [{1}]
-                WHERE {2} = @id
-            ";
-
-            query = String.Format(query, this.TableNameFullyQualified, this.TableName, this.PrimaryKeyFullyQualified);
+            string query = String.Format(Queries.Exists, this.TableNameFullyQualified, this.TableName, this.PrimaryKeyFullyQualified);
 
             if (this.ID > 0)
             {
@@ -204,13 +198,7 @@ namespace Cinch
         /// <returns></returns>
         public bool Exists(PropertyInfo column, string value)
         {
-            string query = @"
-                SELECT COUNT(*) 
-                FROM {0} as [{1}]
-                WHERE {2} = @value
-            ";
-
-            query = String.Format(query, this.TableNameFullyQualified, this.TableName, String.Format("[{0}].[{1}]", this.TableName, column.Name));
+            string query = String.Format(Queries.Exists, this.TableNameFullyQualified, this.TableName, String.Format("[{0}].[{1}]", this.TableName, column.Name));
             if (!String.IsNullOrWhiteSpace(value))
             {
                 using (DataConnect dc = new DataConnect(query, CommandType.Text))

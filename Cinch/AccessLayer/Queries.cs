@@ -6,10 +6,22 @@ using System.Threading.Tasks;
 
 namespace Cinch
 {
-    public static class Queries
+    internal static class Queries
     {
 
-        public static string Insert
+        internal static string Exists
+        {
+            get
+            {
+                return @"
+                    SELECT COUNT(*) 
+                    FROM {0} as [{1}]
+                    WHERE {2} = @value
+                ";
+            }
+        }
+
+        internal static string Insert
         {
             get
             {

@@ -12,7 +12,29 @@ namespace Cinch
     public class CinchMapping
     {
         public List<string> Columns { get; set; }
+        public string ColumnsString
+        {
+            get
+            {
+                if(this.Columns == null || Columns.Count == 0)
+                    throw new ApplicationException(String.Format("Could not build ColumnsString because the objects ValuesQueryParams is null or empty"), new NullReferenceException());
+                
+                return string.Join(",", this.Columns);
+            }
+        }
+        
         public List<string> ValuesQueryParams { get; set; }
+        public string ValuesQueryParamsString
+        {
+            get
+            {
+                if(this.ValuesQueryParams == null || this.ValuesQueryParams.Count == 0)
+                    throw new ApplicationException(String.Format("Could not build ValuesQueryParamsString because the objects ValuesQueryParams is null or empty"), new NullReferenceException());
+
+                return string.Join(",", this.ValuesQueryParams);
+            }
+        }
+
         public List<SqlParameter> SqlParams { get; set; }
     }
 
