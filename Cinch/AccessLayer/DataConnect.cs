@@ -7,7 +7,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Cinch
+namespace CinchORM
 {
     /// <summary>
     /// This class encapsulates the components necessary to perform a SQL query
@@ -343,7 +343,6 @@ namespace Cinch
             }
             catch (Exception)
             {
-
                 throw;
             }
             finally
@@ -501,14 +500,10 @@ namespace Cinch
         {
             try
             {
-
                 //verbose output
                 VerboseOutput();
 
-                //MODIFIED: Mike 04/04/2005: changed from conn.Open() to this.Open()
-                //This made it impossible to use the reader in a transaction
                 this.Open();
-
 
                 dr = cmd.ExecuteReader();
                 return dr;
@@ -751,10 +746,10 @@ namespace Cinch
                 }
             }
 
-            int? result = (int?)rv;
-            if (result.HasValue)
+            int result;
+            if (int.TryParse(String.Format("{0}", rv), out result))
             {
-                return (int)result;
+                return result;
             }
             else
                 return -1;

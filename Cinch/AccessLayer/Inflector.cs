@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace Cinch
+namespace CinchORM
 {
     public static class Inflector
     {

@@ -1,2 +1,2 @@
 # cinch
-Cinch ORM - A Tiny ORM for .NET
+Cinch ORM - A Type-Safe Micro ORM for .NET & MSSQL

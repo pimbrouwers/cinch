@@ -1,7 +1,7 @@
 using System;
 using System.Data.SqlClient;
 
-namespace Cinch {
+namespace CinchORM {
 	/// <summary>
 	/// an exception class that is used to send error 5000 (user errors) from database calls to the user
 	/// this lets us do validation in the database that can be shown to the user without the stack trace

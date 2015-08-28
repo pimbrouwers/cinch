@@ -7,7 +7,7 @@
     <ProjectGuid>{490235A2-C219-43C6-8C1A-717106F922A2}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Cinch</RootNamespace>
+    <RootNamespace>CinchORM</RootNamespace>
     <AssemblyName>Cinch</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -55,9 +55,11 @@
     <Compile Include="AccessLayer\Queries.cs" />
     <Compile Include="AccessLayer\SpecialCharacters.cs" />
     <Compile Include="Attributes\CinchIgnore.cs" />
+    <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Extensions\ReflectionExtensions.cs" />
     <Compile Include="Extensions\SqlParameterCollectionExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
+    <Compile Include="Cinch.cs" />
     <Compile Include="Objects\IModelBase.cs" />
     <Compile Include="Objects\ModelBase.cs" />
     <Compile Include="TypeManagement\Conversion.cs" />

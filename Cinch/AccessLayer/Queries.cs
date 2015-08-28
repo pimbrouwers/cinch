@@ -4,10 +4,35 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Cinch
+namespace CinchORM
 {
     internal static class Queries
     {
+        
+        internal static string GetSchema
+        {
+            get
+            {
+                return @"
+                    SELECT DISTINCT TABLE_SCHEMA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = @table;
+                ";
+            }
+        }
+
+        internal static string GetColumns
+        {
+            get
+            {
+                return @"
+                    DECLARE @cols VARCHAR(8000);
+                    SELECT @cols = COALESCE(@cols + ', ', '') + CONCAT(@table, '.', COLUMN_NAME) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = @table AND TABLE_SCHEMA = @schema;
+
+                    SELECT @cols
+                ";
+            }
+        }
 
         internal static string Exists
         {
@@ -21,17 +46,67 @@ namespace Cinch
             }
         }
 
-        internal static string Insert
+        internal static string FindFirst
         {
             get
             {
                 return @"
-                    INSERT INTO {0} ({1})
-                    VALUES ({2})
-
-                    SELECT SCOPE_IDENTITY()
+                    SELECT TOP 1 {0}
+                    FROM {1} as {2}
+                    WHERE {3} = @id
                 ";
             }
         }
+
+        internal static string Find
+        {
+            get
+            {
+                return @"
+                    SELECT {0}
+                    FROM {1} as {2}
+                    {3}
+                ";
+            }
+        }
+
+        internal static string LastInserted {
+            get
+            {
+                return "SCOPE_IDENTITY()";
+            }
+        }   
+
+        internal static string Insert
+        {
+            get
+            {
+                string insert = @"
+                    INSERT INTO {0} ({1})
+                    VALUES ({2});
+
+                    SELECT {{scope_identity}};
+                ";
+
+                return insert.Replace("{{scope_identity}}", Queries.LastInserted);
+            }
+        }
+
+        internal static string Update
+        {
+            get
+            {
+                string update = @"
+                    UPDATE {0}
+                    SET {1}
+                    WHERE {2} = @id;
+
+                    SELECT {{scope_identity}};
+                ";
+
+                return update.Replace("{{scope_identity}}", Queries.LastInserted);
+            }
+        }
+
     }
 }

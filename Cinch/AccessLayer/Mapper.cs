@@ -1,13 +1,15 @@
-﻿using System;
+﻿using CinchORM.AccessLayer;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Cinch
+namespace CinchORM
 {
     public class CinchMapping
     {
@@ -22,9 +24,10 @@ namespace Cinch
                 return string.Join(",", this.Columns);
             }
         }
-        
+        public string QueryString { get; set; }
+
         public List<string> ValuesQueryParams { get; set; }
-        public string ValuesQueryParamsString
+        public string InsertValuesQueryParamsString
         {
             get
             {
@@ -34,13 +37,36 @@ namespace Cinch
                 return string.Join(",", this.ValuesQueryParams);
             }
         }
+        public string UpdateValuesQueryParamsString
+        {
+            get
+            {
+                if (this.ValuesQueryParams == null || this.ValuesQueryParams.Count == 0 || this.Columns == null || Columns.Count == 0)
+                    throw new ApplicationException(String.Format("Could not build ValuesQueryParamsString because the objects ValuesQueryParams is null or empty"), new NullReferenceException());
+                
+                string updateValuesQueryParamsString = null;
 
+                for (int i = 0; i < this.Columns.Count; i++)
+			    {
+			        string col = this.Columns[i];
+                    string val = this.ValuesQueryParams[i];
+                    updateValuesQueryParamsString = String.Format("{0}{1} = {2},", updateValuesQueryParamsString, col, val);
+			    }
+
+                if (updateValuesQueryParamsString.Substring(updateValuesQueryParamsString.Length - 1, 1) == ",")
+                    return updateValuesQueryParamsString.Substring(0, updateValuesQueryParamsString.Length - 1);
+
+                return updateValuesQueryParamsString;
+
+            }
+        }
+        
         public List<SqlParameter> SqlParams { get; set; }
     }
 
     public static class Mapper
     {
-        public static CinchMapping MapProperties<T>(T obj, List<string> cols = null)
+        public static CinchMapping MapProperties<T>(T obj, List<string> cols = null) where T : ModelBase
         {
             PropertyInfo[] props = obj.GetType().GetProperties();
             List<string> columns = new List<string>();
@@ -63,8 +89,8 @@ namespace Cinch
                 Type t = prop.PropertyType;
                 string placeholder = String.Format("val{0}", i);
 
-                columns.Add(prop.Name);
-                valuesQueryParams.Add(placeholder);
+                columns.Add(String.Format("{0}{1}{2}", SpecialCharacters.ColumnBegin, prop.Name, SpecialCharacters.ColumnEnd));
+                valuesQueryParams.Add(String.Format("{0}{1}", SpecialCharacters.ParamPrefix, placeholder));
 
                 sqlParams.AddParameter(placeholder, Conversion.GetSqlDbType(t), value);
               
@@ -76,6 +102,55 @@ namespace Cinch
                 ValuesQueryParams = valuesQueryParams,
                 SqlParams = sqlParams
             };
+        }
+
+        public static CinchMapping MapQuery<T>(T obj, string query, object[] param) where T : ModelBase
+        {
+            CinchMapping mapping = new CinchMapping() { QueryString = query };
+
+            //no where clause
+            if (String.IsNullOrWhiteSpace(query))
+                return mapping;
+            
+            if(param != null && param.Count() > 0)
+            {
+                //where clause has params, but no param values were passed in.
+                if (!String.IsNullOrWhiteSpace(query) && query.IndexOf('@') > -1 && param.Count() <= 0)
+                    throw new ApplicationException(String.Format("Could not execute Find for {0} because the parameters array is empty", obj.objName), new NullReferenceException());
+                //param counts don't match
+                else if (query.Count(c => c == '@') != param.Count())
+                    throw new ApplicationException(String.Format("Could not execute Find for {0} because the number of parameters in the where clause and parameters array do not match", obj.objName), new NullReferenceException());
+
+                List<SqlParameter> sqlParams = BuildParamsFromString(query, param);
+
+                mapping.SqlParams = sqlParams;
+            }
+            
+
+            return mapping;
+        }
+
+        private static List<SqlParameter> BuildParamsFromString(string query, object[] param)
+        {
+            Regex regex = new Regex("@[A-Za-z0-9]+");
+            MatchCollection matches = regex.Matches(query);
+
+            //param matches don't match param array
+            if (matches.Count != param.Count())
+                throw new ApplicationException(String.Format("Could not build Params because the number of parameters in the where clause and parameters array do not match"), new NullReferenceException());
+
+            List<SqlParameter> sqlParams = new List<SqlParameter>();
+
+            for (int i = 0; i < matches.Count; i++)
+            {
+                Match match = matches[i];
+                object value = param[i];
+
+                //add sql param
+                sqlParams.AddParameter(match.Value, Conversion.GetSqlDbType(value.GetType()), value);
+            }
+
+            return sqlParams;
         }
     }
 }

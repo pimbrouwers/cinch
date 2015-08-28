@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Cinch.AccessLayer
+namespace CinchORM.AccessLayer
 {
     internal static class SpecialCharacters
     {
@@ -21,6 +21,14 @@ namespace Cinch.AccessLayer
             get
             {
                 return "]";
+            }
+        }
+
+        internal static string ParamPrefix
+        {
+            get
+            {
+                return "@";
             }
         }
     }
