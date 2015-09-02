@@ -1,0 +1,10 @@
+sudo: false
+language: csharp
+solution: Cinch.sln
+ 
+install:
+  - nuget restore ./Cinch/Cinch.sln
+  - nuget restore ./Cinch/Cinch.sln
+   
+script:
+  - xbuild /p:Configuration=Release ./Cinch/Cinch.sln
