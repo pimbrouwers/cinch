@@ -5,10 +5,6 @@ VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cinch", "Cinch\Cinch.csproj", "{490235A2-C219-43C6-8C1A-717106F922A2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cinch Test", "Cinch Test\Cinch Test.csproj", "{38EC5355-13A1-4E98-BA03-804FC457C033}"
-EndProject
-Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "Cinch Test Database", "Cinch Test Database\Cinch Test Database.sqlproj", "{365F3AF6-1CC3-4731-AF04-54C00A97880A}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,16 +15,6 @@ Global
 		{490235A2-C219-43C6-8C1A-717106F922A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{490235A2-C219-43C6-8C1A-717106F922A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{490235A2-C219-43C6-8C1A-717106F922A2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{38EC5355-13A1-4E98-BA03-804FC457C033}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{38EC5355-13A1-4E98-BA03-804FC457C033}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{38EC5355-13A1-4E98-BA03-804FC457C033}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{38EC5355-13A1-4E98-BA03-804FC457C033}.Release|Any CPU.Build.0 = Release|Any CPU
-		{365F3AF6-1CC3-4731-AF04-54C00A97880A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{365F3AF6-1CC3-4731-AF04-54C00A97880A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{365F3AF6-1CC3-4731-AF04-54C00A97880A}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
-		{365F3AF6-1CC3-4731-AF04-54C00A97880A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{365F3AF6-1CC3-4731-AF04-54C00A97880A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{365F3AF6-1CC3-4731-AF04-54C00A97880A}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
