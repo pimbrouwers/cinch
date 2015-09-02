@@ -81,7 +81,11 @@ namespace CinchORM
                     (cols != null && cols.Contains(prop.Name)))
                     continue;
 
+#if NET40
+                object value = prop.GetValue(obj, null);
+#else
                 object value = prop.GetValue(obj);
+#endif
 
                 if (value == null)
                     continue;
