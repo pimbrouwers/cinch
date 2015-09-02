@@ -15,9 +15,9 @@ namespace CinchORM
         /// EXISTS - primary key
         /// </summary>
         /// <returns></returns>
-        public static bool Exists<T>(T obj) where T : ModelBase
+        public static int Exists<T>(T obj) where T : ModelBase
         {
-            string query = String.Format(Queries.Exists, obj.TableNameFullyQualified, obj.TableName, obj.PrimaryKeyFullyQualified);
+            string query = String.Format(Queries.Exists, obj.TableNameFullyQualified, obj.TableName, obj.PrimaryKeyFullyQualified, obj.PrimaryKeyFullyQualified);
 
             if (obj.ID > 0)
             {
@@ -26,12 +26,15 @@ namespace CinchORM
                     dc.SetQuery(query);
                     dc.AddParameter("value", SqlDbType.Int, obj.ID);
 
-                    int count = dc.ExecuteScalarInt();
-
-                    if (count > 0)
-                        return true;
-                    else
-                        return false;
+                    try
+                    {
+                        return dc.ExecuteScalarInt();
+                    }
+                    catch (Exception ex)
+                    {
+                        //do something useful here
+                        throw ex;
+                    }
                 }
             }
             else
@@ -44,9 +47,9 @@ namespace CinchORM
         /// <param name="column"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public static bool Exists<T>(T obj, PropertyInfo column, object value) where T : ModelBase
+        public static int Exists<T>(T obj, PropertyInfo column, object value) where T : ModelBase
         {
-            string query = String.Format(Queries.Exists, obj.TableNameFullyQualified, obj.TableName, String.Format("[{0}].[{1}]", obj.TableName, column.Name));
+            string query = String.Format(Queries.Exists, obj.TableNameFullyQualified, obj.TableName, String.Format("[{0}].[{1}]", obj.TableName, column.Name), obj.PrimaryKeyFullyQualified);
             if (value != null)
             {
                 using (DataConnect dc = new DataConnect(query, CommandType.Text))
@@ -54,12 +57,15 @@ namespace CinchORM
                     dc.SetQuery(query);
                     dc.AddParameter("value", Conversion.GetSqlDbType(value.GetType()), value);
 
-                    int count = dc.ExecuteScalarInt();
-
-                    if (count > 0)
-                        return true;
-                    else
-                        return false;
+                    try
+                    {
+                        return dc.ExecuteScalarInt();
+                    }
+                    catch (Exception ex)
+                    {
+                        //do something useful here
+                        throw ex;
+                    }
                 }
             }
             else

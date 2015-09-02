@@ -38,11 +38,12 @@ namespace CinchORM
         {
             get
             {
-                return @"
-                    SELECT COUNT(*) 
+                return  @"
+                    SELECT {3} 
                     FROM {0} as [{1}]
-                    WHERE {2} = @value
+                    WHERE {2} = @value;
                 ";
+
             }
         }
 
