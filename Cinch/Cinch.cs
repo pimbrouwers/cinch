@@ -137,28 +137,51 @@ namespace CinchORM
         /// <summary>
         /// Finds all as List based on where / param
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">The type of the object.</typeparam>
         /// <param name="where"></param>
         /// <param name="param"></param>
         /// <returns></returns>
         public static List<T> Find<T>(T obj, string where = null, object[] param = null) where T : ModelBase
         {
-            CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
+            List<T> result = new List<T>();
 
-            //make sure we have a WHERE 
-            if (mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
-                mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
-
-            using (DataConnect dc = new DataConnect(null, CommandType.Text))
+            if (obj != null)
             {
-                string query = String.Format(Queries.Find, obj.ColumnsFullyQualified, obj.TableNameFullyQualified, obj.TableName, mappings.QueryString);
-                dc.SetQuery(query);
+                CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
 
-                if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
-                    dc.AddParameters(mappings.SqlParams);
+                //make sure we have a WHERE 
+                if (mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                    mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
 
-                return dc.FillList<T>();
+                using (DataConnect dc = new DataConnect(null, CommandType.Text))
+                {
+                    string query = String.Format(Queries.Find, obj.ColumnsFullyQualified, obj.TableNameFullyQualified, obj.TableName, mappings.QueryString);
+                    dc.SetQuery(query);
+
+                    if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                        dc.AddParameters(mappings.SqlParams);
+
+                    result = dc.FillList<T>();
+                }
             }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Finds all as List based on where / param
+        /// </summary>
+        /// <typeparam name="T">The type of the object.</typeparam>
+        /// <param name="where"></param>
+        /// <param name="param"></param>
+        /// <returns></returns>
+        public static List<T> Find<T>(
+            string where = null,
+            object[] param = null) where T : ModelBase, new()
+        {
+            T obj = default(T);
+
+            return Cinch.Find(obj, where, param);
         }
 
         /// <summary>
