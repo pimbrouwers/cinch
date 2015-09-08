@@ -9,9 +9,10 @@ using System.Data.SqlClient;
 
 namespace CinchORM
 {
-    public abstract class ModelBase : IModelBase
+    public abstract class ModelBase : IModelBase, IModelIdentity, IModelName
     {
         protected virtual string primaryKey { get; set; }
+
         public string PrimaryKey
         {
             get
@@ -206,6 +207,5 @@ namespace CinchORM
                 _ID = value;
             }
         }
-
     }
 }

@@ -66,7 +66,7 @@ namespace CinchORM
 
     public static class Mapper
     {
-        public static CinchMapping MapProperties<T>(T obj, List<string> cols = null) where T : ModelBase
+        public static CinchMapping MapProperties<T>(T obj, List<string> cols = null) where T : IModelBase
         {
             PropertyInfo[] props = obj.GetType().GetProperties();
             List<string> columns = new List<string>();
@@ -108,7 +108,7 @@ namespace CinchORM
             };
         }
 
-        public static CinchMapping MapQuery<T>(T obj, string query, object[] param) where T : ModelBase
+        public static CinchMapping MapQuery<T>(T obj, string query, object[] param) where T : IModelBase, IModelName
         {
             CinchMapping mapping = new CinchMapping() { QueryString = query };
 

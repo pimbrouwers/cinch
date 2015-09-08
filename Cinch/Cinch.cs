@@ -16,7 +16,7 @@ namespace CinchORM
         /// </summary>
         /// <param name="obj">The object to be searched.</param>
         /// <returns>The number of existent objects.</returns>
-        public static int Exists<T>(T obj) where T : ModelBase
+        public static int Exists<T>(T obj) where T : IModelBase, IModelIdentity, IModelName
         {
             string query = String.Format(Queries.Exists, obj.TableNameFullyQualified, obj.TableName, obj.PrimaryKeyFullyQualified, obj.PrimaryKeyFullyQualified);
 
@@ -49,7 +49,7 @@ namespace CinchORM
         /// <param name="column"></param>
         /// <param name="value"></param>
         /// <returns>The number of existent objects.</returns>
-        public static int Exists<T>(T obj, PropertyInfo column, object value) where T : ModelBase
+        public static int Exists<T>(T obj, PropertyInfo column, object value) where T : IModelBase, IModelName
         {
             string query = String.Format(Queries.Exists, obj.TableNameFullyQualified, obj.TableName, String.Format("[{0}].[{1}]", obj.TableName, column.Name), obj.PrimaryKeyFullyQualified);
             if (value != null)
@@ -78,7 +78,7 @@ namespace CinchORM
         /// Find first by primary key of existing object
         /// </summary>
         /// <returns></returns>
-        public static T FindFirst<T>(T obj) where T : ModelBase
+        public static T FindFirst<T>(T obj) where T : IModelBase, IModelIdentity, IModelName
         {
 
             if (obj.ID > 0)
@@ -101,9 +101,9 @@ namespace CinchORM
         /// Find first based on explicit primary key value
         /// </summary>
         /// <returns></returns>
-        public static T FindFirst<T>(T obj, int ID) where T : ModelBase
+        public static T FindFirst<T>(T obj, int ID) where T : IModelBase
         {
-            T result = null;
+            T result = default(T);
 
             if (obj != null)
             {
@@ -127,7 +127,7 @@ namespace CinchORM
         /// <typeparam name="T">The type of the object.</typeparam>
         /// <param name="ID">The primary key to be searched.</param>
         /// <returns>The object if found; null, otherwise.</returns>
-        public static T FindFirst<T>(int ID) where T : ModelBase, new()
+        public static T FindFirst<T>(int ID) where T : IModelBase, new()
         {
             var obj = default(T);
 
@@ -141,7 +141,7 @@ namespace CinchORM
         /// <param name="where"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        public static List<T> Find<T>(T obj, string where = null, object[] param = null) where T : ModelBase
+        public static List<T> Find<T>(T obj, string where = null, object[] param = null) where T : IModelBase, IModelName
         {
             List<T> result = new List<T>();
 
@@ -177,7 +177,7 @@ namespace CinchORM
         /// <returns></returns>
         public static List<T> Find<T>(
             string where = null,
-            object[] param = null) where T : ModelBase, new()
+            object[] param = null) where T : IModelBase, IModelName
         {
             T obj = default(T);
 
@@ -193,7 +193,7 @@ namespace CinchORM
         /// <exception cref="System.Exception">
         /// Throws <seealso cref="System.Exception"/>.
         /// </exception>
-        public static int Insert<T>(T obj, List<string> cols = null) where T : ModelBase
+        public static int Insert<T>(T obj, List<string> cols = null) where T : IModelBase
         {
             using (DataConnect dc = new DataConnect(null, CommandType.Text))
             {
@@ -218,7 +218,7 @@ namespace CinchORM
         /// UPDATE
         /// </summary>
         /// <returns>Int32</returns>
-        public static int Update<T>(T obj, List<string> cols = null) where T : ModelBase
+        public static int Update<T>(T obj, List<string> cols = null) where T : IModelBase, IModelIdentity
         {
             using (DataConnect dc = new DataConnect(null, CommandType.Text))
             {
@@ -240,7 +240,7 @@ namespace CinchORM
             }
         }
 
-        public static T ExecCustom<T>(T obj, string query, object[] param = null) where T : ModelBase
+        public static T ExecCustom<T>(T obj, string query, object[] param = null) where T : IModelBase, IModelName
         {
             CinchMapping mappings = Mapper.MapQuery<T>(obj, query, param);
 
