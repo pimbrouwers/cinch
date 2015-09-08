@@ -101,15 +101,35 @@ namespace CinchORM
         /// <returns></returns>
         public static T FindFirst<T>(T obj, int ID) where T : ModelBase
         {
-            string query = String.Format(Queries.FindFirst, obj.ColumnsFullyQualified, obj.TableNameFullyQualified, obj.TableName, obj.PrimaryKeyFullyQualified);
+            T result = null;
 
-            using (DataConnect dc = new DataConnect(query, CommandType.Text))
+            if (obj != null)
             {
-                dc.SetQuery(query);
-                dc.AddParameter("id", SqlDbType.Int, ID);
+                string query = String.Format(Queries.FindFirst, obj.ColumnsFullyQualified, obj.TableNameFullyQualified, obj.TableName, obj.PrimaryKeyFullyQualified);
 
-                return dc.FillObject<T>();
+                using (DataConnect dc = new DataConnect(query, CommandType.Text))
+                {
+                    dc.SetQuery(query);
+                    dc.AddParameter("id", SqlDbType.Int, ID);
+
+                    result = dc.FillObject<T>();
+                }
             }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Find first based on explicit primary key value
+        /// </summary>
+        /// <typeparam name="T">The type of the object.</typeparam>
+        /// <param name="ID">The primary key to be searched.</param>
+        /// <returns>The object if found; null, otherwise.</returns>
+        public static T FindFirst<T>(int ID) where T : ModelBase, new()
+        {
+            var obj = default(T);
+
+            return Cinch.FindFirst<T>(obj, ID);
         }
 
         /// <summary>
