@@ -12,9 +12,10 @@ namespace CinchORM
     public static class Cinch
     {
         /// <summary>
-        /// EXISTS - primary key
+        /// Checks if an object exists using the primary key.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="obj">The object to be searched.</param>
+        /// <returns>The number of existent objects.</returns>
         public static int Exists<T>(T obj) where T : ModelBase
         {
             string query = String.Format(Queries.Exists, obj.TableNameFullyQualified, obj.TableName, obj.PrimaryKeyFullyQualified, obj.PrimaryKeyFullyQualified);
@@ -42,11 +43,12 @@ namespace CinchORM
         }
 
         /// <summary>
-        /// EXISTS - any column value
+        /// Checks if an object exists using any of its properties.
         /// </summary>
+        /// <param name="obj">The object to be searched.</param>
         /// <param name="column"></param>
         /// <param name="value"></param>
-        /// <returns></returns>
+        /// <returns>The number of existent objects.</returns>
         public static int Exists<T>(T obj, PropertyInfo column, object value) where T : ModelBase
         {
             string query = String.Format(Queries.Exists, obj.TableNameFullyQualified, obj.TableName, String.Format("[{0}].[{1}]", obj.TableName, column.Name), obj.PrimaryKeyFullyQualified);
@@ -160,9 +162,14 @@ namespace CinchORM
         }
 
         /// <summary>
-        /// INSERT
+        /// Inserts an object to the database.
         /// </summary>
+        /// <param name="obj">The object to be inserted.</param>
+        /// <param name="cols">The whitelist of columns to be inserted.</param>
         /// <returns>Int32</returns>
+        /// <exception cref="System.Exception">
+        /// Throws <seealso cref="System.Exception"/>.
+        /// </exception>
         public static int Insert<T>(T obj, List<string> cols = null) where T : ModelBase
         {
             using (DataConnect dc = new DataConnect(null, CommandType.Text))
@@ -224,6 +231,5 @@ namespace CinchORM
                 return dc.FillObject<T>();
             }
         }
-
     }
 }
