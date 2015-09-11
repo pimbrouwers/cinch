@@ -20,7 +20,7 @@ namespace CinchORM
                 if (String.IsNullOrWhiteSpace(primaryKey))
                 {
                     string singular = objName.Singularize();
-                    string titleCase = (String.IsNullOrWhiteSpace(singular)) ? objName.Titleize() : singular.Titleize();
+                    string titleCase = (String.IsNullOrWhiteSpace(singular)) ? objName.Pascalize() : singular.Pascalize();
                     primaryKey = String.Format("{0}ID", (String.IsNullOrWhiteSpace(titleCase) ? objName : titleCase));
                 }
 
@@ -47,7 +47,7 @@ namespace CinchORM
                 if (String.IsNullOrWhiteSpace(tableName))
                 {
                     string plural = objName.Pluralize();
-                    string titleCase = (String.IsNullOrWhiteSpace(plural)) ? objName.Titleize() : plural.Titleize();
+                    string titleCase = (String.IsNullOrWhiteSpace(plural)) ? objName.Pascalize() : plural.Pascalize();
                     return (String.IsNullOrWhiteSpace(titleCase) ? objName : titleCase);
                 }
 
