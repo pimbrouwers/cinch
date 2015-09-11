@@ -150,8 +150,11 @@ namespace CinchORM
                 CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
 
                 //make sure we have a WHERE 
-                if (mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                if (!string.IsNullOrWhiteSpace(mappings.QueryString) &&
+                    mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                {
                     mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
+                }
 
                 using (DataConnect dc = new DataConnect(null, CommandType.Text))
                 {
@@ -177,9 +180,9 @@ namespace CinchORM
         /// <returns></returns>
         public static List<T> Find<T>(
             string where = null,
-            object[] param = null) where T : IModelBase, IModelName
+            object[] param = null) where T : IModelBase, IModelName, new()
         {
-            T obj = default(T);
+            T obj = new T();
 
             return Cinch.Find(obj, where, param);
         }
@@ -253,6 +256,20 @@ namespace CinchORM
 
                 return dc.FillObject<T>();
             }
+        }
+
+        private static string AppendWhereClause(string value)
+        {
+            var result = value;
+
+            //make sure we have a WHERE 
+            if (!string.IsNullOrWhiteSpace(value) &&
+                value.ToLowerInvariant().IndexOf("where") == -1)
+            {
+                result = String.Format("WHERE {0}", value);
+            }
+
+            return result;
         }
     }
 }
