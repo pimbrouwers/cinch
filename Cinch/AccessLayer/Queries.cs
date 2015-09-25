@@ -8,7 +8,18 @@ namespace CinchORM
 {
     internal static class Queries
     {
-        
+        internal static string Count
+        {
+            get
+            {
+                return @"
+                    SELECT COUNT(*)
+                    FROM {0} as {1}
+                    {2}
+                ";
+            }
+        }
+
         internal static string GetSchema
         {
             get

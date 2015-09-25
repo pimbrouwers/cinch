@@ -171,6 +171,45 @@ namespace CinchORM
             return result;
         }
 
+        public static List<T> Count<T>(
+            string where = null,
+            object[] param = null) where T : IModelBase, IModelName, new()
+        {
+            T obj = new T();
+
+            return Cinch.Count(obj, where, param);
+        }
+
+        public static List<T> Count<T>(T obj, string where = null, object[] param = null) where T : IModelBase, IModelName
+        {
+            List<T> result = new List<T>();
+
+            if (obj != null)
+            {
+                CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
+
+                //make sure we have a WHERE 
+                if (!string.IsNullOrWhiteSpace(mappings.QueryString) &&
+                    mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                {
+                    mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
+                }
+
+                using (DataConnect dc = new DataConnect(null, CommandType.Text))
+                {
+                    string query = String.Format(Queries.Count, obj.TableNameFullyQualified, obj.TableName, mappings.QueryString);
+                    dc.SetQuery(query);
+
+                    if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                        dc.AddParameters(mappings.SqlParams);
+
+                    result = dc.FillList<T>();
+                }
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Finds all as List based on where / param
         /// </summary>
