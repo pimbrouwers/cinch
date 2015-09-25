@@ -59,6 +59,23 @@ namespace CinchORM
             }
         }
 
+        internal static string PagedFind
+        {
+            get
+            {
+                return @"
+                    SELECT {0}
+                    FROM ( 
+                        SELECT ROW_NUMBER() OVER (ORDER BY {4}) AS RowNum, *
+                        FROM {1}
+                        {3}
+                    ) AS {2}
+                    WHERE   RowNum >= {5}
+                    AND RowNum < {6}
+                    ORDER BY RowNum";
+            }
+        }
+
         internal static string Find
         {
             get

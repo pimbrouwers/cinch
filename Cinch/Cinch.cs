@@ -129,7 +129,7 @@ namespace CinchORM
         /// <returns>The object if found; null, otherwise.</returns>
         public static T FindFirst<T>(int ID) where T : IModelBase, new()
         {
-            var obj = default(T);
+            var obj = new T();
 
             return Cinch.FindFirst<T>(obj, ID);
         }
@@ -178,6 +178,61 @@ namespace CinchORM
         /// <param name="where"></param>
         /// <param name="param"></param>
         /// <returns></returns>
+        public static List<T> PagedFind<T>(
+            T obj, 
+            string where = null,
+            object[] param = null, 
+            string orderBy = "",
+            int page = 1,
+            int pageSize = 100) where T : IModelBase, IModelName
+        {
+            List<T> result = new List<T>();
+
+            if (obj != null)
+            {
+                CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
+
+                //make sure we have a WHERE 
+                if (!string.IsNullOrWhiteSpace(mappings.QueryString) &&
+                    mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                {
+                    mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
+                }
+
+                using (DataConnect dc = new DataConnect(null, CommandType.Text))
+                {
+                    var lowerIndex = ((page - 1) * pageSize) + 1;
+                    var upperIndex = lowerIndex + pageSize;
+
+                    string query = String.Format(
+                        Queries.PagedFind, 
+                        obj.ColumnsFullyQualified, 
+                        obj.TableNameFullyQualified, 
+                        obj.TableName, 
+                        mappings.QueryString,
+                        orderBy,
+                        lowerIndex,
+                        upperIndex);
+
+                    dc.SetQuery(query);
+
+                    if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                        dc.AddParameters(mappings.SqlParams);
+
+                    result = dc.FillList<T>();
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Finds all as List based on where / param
+        /// </summary>
+        /// <typeparam name="T">The type of the object.</typeparam>
+        /// <param name="where"></param>
+        /// <param name="param"></param>
+        /// <returns></returns>
         public static List<T> Find<T>(
             string where = null,
             object[] param = null) where T : IModelBase, IModelName, new()
@@ -185,6 +240,25 @@ namespace CinchORM
             T obj = new T();
 
             return Cinch.Find(obj, where, param);
+        }
+
+        /// <summary>
+        /// Finds all as List based on where / param
+        /// </summary>
+        /// <typeparam name="T">The type of the object.</typeparam>
+        /// <param name="where"></param>
+        /// <param name="param"></param>
+        /// <returns></returns>
+        public static List<T> PagedFind<T>(
+            string where = null,
+            object[] param = null,
+            string orderBy = "",
+            int page = 1,
+            int pageSize = 100) where T : IModelBase, IModelName, new()
+        {
+            T obj = new T();
+
+            return Cinch.PagedFind(obj, where, param, orderBy, page, pageSize);
         }
 
         /// <summary>
