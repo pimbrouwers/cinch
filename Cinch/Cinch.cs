@@ -171,7 +171,7 @@ namespace CinchORM
             return result;
         }
 
-        public static List<T> Count<T>(
+        public static int Count<T>(
             string where = null,
             object[] param = null) where T : IModelBase, IModelName, new()
         {
@@ -180,9 +180,9 @@ namespace CinchORM
             return Cinch.Count(obj, where, param);
         }
 
-        public static List<T> Count<T>(T obj, string where = null, object[] param = null) where T : IModelBase, IModelName
+        public static int Count<T>(T obj, string where = null, object[] param = null) where T : IModelBase, IModelName
         {
-            List<T> result = new List<T>();
+            int result = 0;
 
             if (obj != null)
             {
@@ -203,7 +203,7 @@ namespace CinchORM
                     if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
                         dc.AddParameters(mappings.SqlParams);
 
-                    result = dc.FillList<T>();
+                    result = dc.FillList<T>().Count;
                 }
             }
 
