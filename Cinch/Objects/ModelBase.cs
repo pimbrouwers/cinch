@@ -6,13 +6,15 @@ using System.Threading.Tasks;
 using System.Data;
 using System.Reflection;
 using System.Data.SqlClient;
+using Newtonsoft.Json;
 
 namespace CinchORM
 {
-    public abstract class ModelBase : IModelBase, IModelIdentity, IModelName
+    public abstract class ModelBase : IModelBase
     {
         protected virtual string primaryKey { get; set; }
 
+        [JsonIgnore]
         public string PrimaryKey
         {
             get
@@ -27,6 +29,8 @@ namespace CinchORM
                 return primaryKey;
             }
         }
+
+        [JsonIgnore]
         public string PrimaryKeyFullyQualified
         {
             get
@@ -39,6 +43,8 @@ namespace CinchORM
         /// TABLE NAME
         /// </summary>
         protected virtual string tableName { get; set; }
+
+        [JsonIgnore]
         public string TableName
         {
             get
@@ -54,6 +60,8 @@ namespace CinchORM
                 return tableName;
             }
         }
+
+        [JsonIgnore]
         public string TableNameFullyQualified
         {
             get
@@ -66,6 +74,8 @@ namespace CinchORM
         /// SCHEMA
         /// </summary>
         protected virtual string schema { get; set; }
+
+        [JsonIgnore]
         public string Schema
         {
             get
@@ -76,6 +86,7 @@ namespace CinchORM
                     return schema;
             }
         }
+
         public string GetSchema()
         {
             try
@@ -104,6 +115,8 @@ namespace CinchORM
         /// DISPLAY FIELD (for listing query)
         /// </summary>
         protected virtual string displayField { get; set; }
+
+        [JsonIgnore]
         public string DisplayField
         {
             get
@@ -131,6 +144,8 @@ namespace CinchORM
                 return columns.StringToStringList(',').Select(c => c.Substring(c.IndexOf('.') + 1)).ToList(); 
             } 
         }
+        
+        [JsonIgnore]
         public string ColumnsFullyQualified
         {
             get
@@ -162,6 +177,8 @@ namespace CinchORM
         /// Get Class Name
         /// </summary>
         private string _objName;
+
+        [JsonIgnore]
         public string objName
         {
             get
@@ -179,6 +196,8 @@ namespace CinchORM
         /// ID
         /// </summary>
         private int _ID;
+
+        [JsonIgnore]
         public int ID
         {
             get

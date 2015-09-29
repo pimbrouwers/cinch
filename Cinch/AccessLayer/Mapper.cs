@@ -108,7 +108,7 @@ namespace CinchORM
             };
         }
 
-        public static CinchMapping MapQuery<T>(T obj, string query, object[] param) where T : IModelBase, IModelName
+        public static CinchMapping MapQuery<T>(T obj, string query, object[] param) where T : ModelBase
         {
             CinchMapping mapping = new CinchMapping() { QueryString = query };
 

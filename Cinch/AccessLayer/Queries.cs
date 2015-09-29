@@ -13,7 +13,7 @@ namespace CinchORM
             get
             {
                 return @"
-                    SELECT COUNT(*)
+                    SELECT COUNT(*) AS CountResult
                     FROM {0} as {1}
                     {2}
                 ";
