@@ -86,6 +86,8 @@
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Cinch.cs" />
     <Compile Include="Objects\IModelBase.cs" />
+    <Compile Include="Objects\IModelIdentity.cs" />
+    <Compile Include="Objects\IModelName.cs" />
     <Compile Include="Objects\ModelBase.cs" />
     <Compile Include="TypeManagement\Conversion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
