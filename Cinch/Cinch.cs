@@ -203,7 +203,7 @@ namespace CinchORM
                     if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
                         dc.AddParameters(mappings.SqlParams);
 
-                    result = dc.FillList<T>().Count;
+                    result = dc.ExecuteScalarInt();
                 }
             }
 
