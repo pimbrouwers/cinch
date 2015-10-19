@@ -87,6 +87,18 @@ namespace CinchORM
             }
         }
 
+        internal static string Delete
+        {
+            get
+            {
+                return @"
+                    DELETE {0}
+                    FROM {1}
+                    {2}
+                ";
+            }
+        }
+
         internal static string Find
         {
             get

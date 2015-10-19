@@ -171,6 +171,45 @@ namespace CinchORM
             return result;
         }
 
+        public static int Delete<T>(
+            string where = null,
+            object[] param = null) where T : ModelBase, new()
+        {
+            T obj = new T();
+
+            return Cinch.Delete(obj, where, param);
+        }
+
+        public static int Delete<T>(T obj, string where = null, object[] param = null) where T : ModelBase
+        {
+            int result = 0;
+
+            if (obj != null)
+            {
+                CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
+
+                //make sure we have a WHERE 
+                if (!string.IsNullOrWhiteSpace(mappings.QueryString) &&
+                    mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                {
+                    mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
+                }
+
+                using (DataConnect dc = new DataConnect(null, CommandType.Text))
+                {
+                    string query = String.Format(Queries.Delete, obj.ColumnsFullyQualified, obj.TableNameFullyQualified, mappings.QueryString);
+                    dc.SetQuery(query);
+
+                    if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                        dc.AddParameters(mappings.SqlParams);
+
+                    return dc.ExecuteScalarInt();
+                }
+            }
+
+            return result;
+        }
+
         public static int Count<T>(
             string where = null,
             object[] param = null) where T : ModelBase, new()
