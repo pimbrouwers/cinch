@@ -11,6 +11,37 @@ namespace CinchORM
 {
     public static class Cinch
     {
+
+        public static void Delete<T>(string where = null, object[] param = null) where T : IModelBase, IModelName, new()
+        {
+            T obj = new T();
+
+            List<T> result = new List<T>();
+
+            if (obj != null)
+            {
+                CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
+
+                //make sure we have a WHERE 
+                if (!string.IsNullOrWhiteSpace(mappings.QueryString) &&
+                    mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                {
+                    mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
+                }
+
+                using (DataConnect dc = new DataConnect(null, CommandType.Text))
+                {
+                    string query = String.Format(Queries.Delete, obj.TableNameFullyQualified, mappings.QueryString);
+                    dc.SetQuery(query);
+
+                    if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                        dc.AddParameters(mappings.SqlParams);
+
+                    dc.ExecuteNonQuery();
+                }
+            }
+        }
+
         /// <summary>
         /// Checks if an object exists using the primary key.
         /// </summary>
@@ -383,6 +414,28 @@ namespace CinchORM
             }
 
             return result;
+        }
+
+        public static int Fix()
+        {
+            var result = 0;
+
+                using (DataConnect dc = new DataConnect(
+                    "update Admin.Products set Created = GETDATE(), Modified = GETDATE()",
+                    CommandType.Text))
+                {
+ 
+                    try
+                    {
+                        result = dc.ExecuteScalarInt();
+                    }
+                    catch (Exception ex)
+                    {
+                        //do something useful here
+                        throw ex;
+                    }
+                }
+                return result;
         }
     }
 }

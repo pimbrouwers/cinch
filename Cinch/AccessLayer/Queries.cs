@@ -13,7 +13,7 @@ namespace CinchORM
             get
             {
                 return @"
-                    SELECT COUNT(*)
+                    SELECT COUNT(*) 
                     FROM {0} as {1}
                     {2}
                 ";
@@ -84,6 +84,18 @@ namespace CinchORM
                     WHERE   RowNum >= {5}
                     AND RowNum < {6}
                     ORDER BY RowNum";
+            }
+        }
+
+        internal static string Delete
+        {
+            get
+            {
+                return @"
+                    DELETE 
+                    FROM {0}
+                    {1}
+                ";
             }
         }
 
