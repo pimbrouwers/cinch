@@ -92,9 +92,9 @@ namespace CinchORM
             get
             {
                 return @"
-                    DELETE {0}
-                    FROM {1}
-                    {2}
+                    DELETE 
+                    FROM {0}
+                    {1}
                 ";
             }
         }
