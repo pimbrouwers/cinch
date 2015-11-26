@@ -197,7 +197,7 @@ namespace CinchORM
 
                 using (DataConnect dc = new DataConnect(null, CommandType.Text))
                 {
-                    string query = String.Format(Queries.Delete, obj.ColumnsFullyQualified, obj.TableNameFullyQualified, mappings.QueryString);
+                    string query = String.Format(Queries.Delete, obj.TableNameFullyQualified, mappings.QueryString);
                     dc.SetQuery(query);
 
                     if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
