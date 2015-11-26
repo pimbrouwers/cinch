@@ -65,6 +65,9 @@ namespace CinchORM
                 case TypeCode.Boolean:
                     return SqlDbType.Bit;
                 
+                case TypeCode.Char:
+                    return SqlDbType.NChar;
+
                 case TypeCode.String:
                     return SqlDbType.NVarChar;
 
@@ -107,6 +110,8 @@ namespace CinchORM
 
                 case SqlDbType.Char:
                 case SqlDbType.NChar:
+                    return typeof(char);
+                    
                 case SqlDbType.NText:
                 case SqlDbType.NVarChar:
                 case SqlDbType.Text:

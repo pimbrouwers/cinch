@@ -8,7 +8,18 @@ namespace CinchORM
 {
     internal static class Queries
     {
-        
+        internal static string Count
+        {
+            get
+            {
+                return @"
+                    SELECT COUNT(*) AS CountResult
+                    FROM {0} as {1}
+                    {2}
+                ";
+            }
+        }
+
         internal static string GetSchema
         {
             get
@@ -55,6 +66,35 @@ namespace CinchORM
                     SELECT TOP 1 {0}
                     FROM {1} as {2}
                     WHERE {3} = @id
+                ";
+            }
+        }
+
+        internal static string PagedFind
+        {
+            get
+            {
+                return @"
+                    SELECT {0}
+                    FROM ( 
+                        SELECT ROW_NUMBER() OVER (ORDER BY {4}) AS RowNum, *
+                        FROM {1}
+                        {3}
+                    ) AS {2}
+                    WHERE   RowNum >= {5}
+                    AND RowNum < {6}
+                    ORDER BY RowNum";
+            }
+        }
+
+        internal static string Delete
+        {
+            get
+            {
+                return @"
+                    DELETE 
+                    FROM {0}
+                    {1}
                 ";
             }
         }

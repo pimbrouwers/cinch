@@ -103,7 +103,7 @@ namespace CinchORM
         /// <returns></returns>
         public static T FindFirst<T>(T obj, int ID) where T : ModelBase
         {
-            T result = null;
+            T result = default(T);
 
             if (obj != null)
             {
@@ -129,7 +129,7 @@ namespace CinchORM
         /// <returns>The object if found; null, otherwise.</returns>
         public static T FindFirst<T>(int ID) where T : ModelBase, new()
         {
-            var obj = default(T);
+            var obj = new T();
 
             return Cinch.FindFirst<T>(obj, ID);
         }
@@ -150,12 +150,148 @@ namespace CinchORM
                 CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
 
                 //make sure we have a WHERE 
-                if (mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                if (!string.IsNullOrWhiteSpace(mappings.QueryString) &&
+                    mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                {
                     mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
+                }
 
                 using (DataConnect dc = new DataConnect(null, CommandType.Text))
                 {
                     string query = String.Format(Queries.Find, obj.ColumnsFullyQualified, obj.TableNameFullyQualified, obj.TableName, mappings.QueryString);
+                    dc.SetQuery(query);
+
+                    if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                        dc.AddParameters(mappings.SqlParams);
+
+                    result = dc.FillList<T>();
+                }
+            }
+
+            return result;
+        }
+
+        public static int Delete<T>(
+            string where = null,
+            object[] param = null) where T : ModelBase, new()
+        {
+            T obj = new T();
+
+            return Cinch.Delete(obj, where, param);
+        }
+
+        public static int Delete<T>(T obj, string where = null, object[] param = null) where T : ModelBase
+        {
+            int result = 0;
+
+            if (obj != null)
+            {
+                CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
+
+                //make sure we have a WHERE 
+                if (!string.IsNullOrWhiteSpace(mappings.QueryString) &&
+                    mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                {
+                    mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
+                }
+
+                using (DataConnect dc = new DataConnect(null, CommandType.Text))
+                {
+                    string query = String.Format(Queries.Delete, obj.ColumnsFullyQualified, obj.TableNameFullyQualified, mappings.QueryString);
+                    dc.SetQuery(query);
+
+                    if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                        dc.AddParameters(mappings.SqlParams);
+
+                    return dc.ExecuteScalarInt();
+                }
+            }
+
+            return result;
+        }
+
+        public static int Count<T>(
+            string where = null,
+            object[] param = null) where T : ModelBase, new()
+        {
+            T obj = new T();
+
+            return Cinch.Count(obj, where, param);
+        }
+
+        public static int Count<T>(T obj, string where = null, object[] param = null) where T : ModelBase
+        {
+            int result = 0;
+
+            if (obj != null)
+            {
+                CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
+
+                //make sure we have a WHERE 
+                if (!string.IsNullOrWhiteSpace(mappings.QueryString) &&
+                    mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                {
+                    mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
+                }
+
+                using (DataConnect dc = new DataConnect(null, CommandType.Text))
+                {
+                    string query = String.Format(Queries.Count, obj.TableNameFullyQualified, obj.TableName, mappings.QueryString);
+                    dc.SetQuery(query);
+
+                    if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                        dc.AddParameters(mappings.SqlParams);
+
+                    result = dc.ExecuteScalarInt();
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Finds all as List based on where / param
+        /// </summary>
+        /// <typeparam name="T">The type of the object.</typeparam>
+        /// <param name="where"></param>
+        /// <param name="param"></param>
+        /// <returns></returns>
+        public static List<T> PagedFind<T>(
+            T obj, 
+            string where = null,
+            object[] param = null, 
+            string orderBy = "",
+            int page = 1,
+            int pageSize = 100) where T : ModelBase
+        {
+            List<T> result = new List<T>();
+
+            if (obj != null)
+            {
+                CinchMapping mappings = Mapper.MapQuery<T>(obj, where, param);
+
+                //make sure we have a WHERE 
+                if (!string.IsNullOrWhiteSpace(mappings.QueryString) &&
+                    mappings.QueryString.ToLowerInvariant().IndexOf("where") == -1)
+                {
+                    mappings.QueryString = String.Format("WHERE {0}", mappings.QueryString);
+                }
+
+                using (DataConnect dc = new DataConnect(null, CommandType.Text))
+                {
+                    var lowerIndex = ((page - 1) * pageSize) + 1;
+                    var upperIndex = lowerIndex + pageSize;
+
+                    string query = String.Format(
+                        Queries.PagedFind, 
+                        obj.ColumnsFullyQualified, 
+                        obj.TableNameFullyQualified, 
+                        obj.TableName, 
+                        mappings.QueryString,
+                        orderBy,
+                        lowerIndex,
+                        upperIndex);
+
                     dc.SetQuery(query);
 
                     if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
@@ -179,9 +315,28 @@ namespace CinchORM
             string where = null,
             object[] param = null) where T : ModelBase, new()
         {
-            T obj = default(T);
+            T obj = new T();
 
             return Cinch.Find(obj, where, param);
+        }
+
+        /// <summary>
+        /// Finds all as List based on where / param
+        /// </summary>
+        /// <typeparam name="T">The type of the object.</typeparam>
+        /// <param name="where"></param>
+        /// <param name="param"></param>
+        /// <returns></returns>
+        public static List<T> PagedFind<T>(
+            string where = null,
+            object[] param = null,
+            string orderBy = "",
+            int page = 1,
+            int pageSize = 100) where T : ModelBase, new()
+        {
+            T obj = new T();
+
+            return Cinch.PagedFind(obj, where, param, orderBy, page, pageSize);
         }
 
         /// <summary>
@@ -240,7 +395,7 @@ namespace CinchORM
             }
         }
 
-        public static T ExecCustom<T>(T obj, string query, object[] param = null) where T : ModelBase
+        public static T ExecCustom<T>(T obj, string query, object[] param = null) where T :ModelBase
         {
             CinchMapping mappings = Mapper.MapQuery<T>(obj, query, param);
 
@@ -253,6 +408,20 @@ namespace CinchORM
 
                 return dc.FillObject<T>();
             }
+        }
+
+        private static string AppendWhereClause(string value)
+        {
+            var result = value;
+
+            //make sure we have a WHERE 
+            if (!string.IsNullOrWhiteSpace(value) &&
+                value.ToLowerInvariant().IndexOf("where") == -1)
+            {
+                result = String.Format("WHERE {0}", value);
+            }
+
+            return result;
         }
     }
 }
