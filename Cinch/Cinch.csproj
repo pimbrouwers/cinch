@@ -61,7 +61,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AccessLayer\DataConnect.cs" />
+    <Compile Include="AccessLayer\Cinch.cs" />
+    <Compile Include="AccessLayer\CinchCache.cs" />
     <Compile Include="AccessLayer\DBException.cs" />
     <Compile Include="Mapping\Mapper.cs" />
     <Compile Include="AccessLayer\Queries.cs" />
@@ -71,7 +72,7 @@
     <Compile Include="Extensions\ReflectionExtensions.cs" />
     <Compile Include="Extensions\SqlParameterCollectionExtensions.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
-    <Compile Include="Cinch.cs" />
+    <Compile Include="AccessLayer\CRUD.cs" />
     <Compile Include="Objects\IModelBase.cs" />
     <Compile Include="Objects\ModelBase.cs" />
     <Compile Include="TypeManagement\Conversion.cs" />

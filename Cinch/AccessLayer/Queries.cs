@@ -87,6 +87,18 @@ namespace CinchORM
             }
         }
 
+        internal static string DeleteByID
+        {
+            get
+            {
+                return @"
+                    DELETE
+                    FROM {0}
+                    WHERE {1} = @id
+                ";
+            }
+        }
+
         internal static string Delete
         {
             get

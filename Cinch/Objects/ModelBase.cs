@@ -84,15 +84,14 @@ namespace CinchORM
                     {
                         try
                         {
-                            using (DataConnect dc = new DataConnect(Queries.GetSchema, CommandType.Text))
+                            using (Cinch dc = new Cinch(Queries.GetSchema, CommandType.Text))
                             {
-                                dc.SetQuery(Queries.GetSchema);
                                 dc.AddParameter("table", SqlDbType.NVarChar, this.TableName);
 
                                 _schema = String.Format("{0}", dc.ExecuteScalar());
 
                                 if (String.IsNullOrWhiteSpace(_schema))
-                                    throw new ApplicationException(String.Format("Invalid or null schema for {0}. Does the table exist?", this.objName), new NullReferenceException());
+                                    throw new ApplicationException(String.Format("Invalid or null schema for {0}. Does the table exist?", this.ObjName), new NullReferenceException());
 
                             }
                         }
@@ -120,43 +119,45 @@ namespace CinchORM
         /// COLUMNS
         /// </summary>
         protected virtual string columns { get; set; }
-        private List<string> columnList 
-        { 
-            get 
-            {
-                if (String.IsNullOrWhiteSpace(columns))
-                    columns = GetColumns();
-
-                return columns.StringToStringList(',').Select(c => c.Substring(c.IndexOf('.') + 1)).ToList(); 
-            } 
-        }
+        private string _columns;
         public string ColumnsFullyQualified
         {
             get
             {
-                if (String.IsNullOrWhiteSpace(columns))
-                    columns = GetColumns();
+                if(String.IsNullOrWhiteSpace(_columns))
+                {
+                    if(String.IsNullOrWhiteSpace(columns))
+                    {
+                        using (Cinch dc = new Cinch(Queries.GetColumns, CommandType.Text))
+                        {
+                            dc.AddParameter("table", SqlDbType.NVarChar, this.TableName);
+                            dc.AddParameter("schema", SqlDbType.NVarChar, this.Schema);
 
-                return columns;
+                            string cols = String.Format("{0}", dc.ExecuteScalar());
+
+                            if (String.IsNullOrWhiteSpace(cols))
+                                throw new ApplicationException(String.Format("Invalid or null column values for {0}", this.ObjName), new NullReferenceException());
+
+                            _columns = cols;
+                        }
+                    }
+                    else
+                    {
+                        _columns = columns;
+                    }
+                }
+
+                if (String.IsNullOrWhiteSpace(_columns))
+                    throw new ApplicationException(String.Format("Object columns could not be found.", this.ObjName), new NullReferenceException());
+                
+                return _columns;
             }
-        }
-        public string GetColumns()
-        {
-            using (DataConnect dc = new DataConnect(Queries.GetColumns, CommandType.Text))
+            set
             {
-                dc.SetQuery(Queries.GetColumns);
-                dc.AddParameter("table", SqlDbType.NVarChar, this.TableName);
-                dc.AddParameter("schema", SqlDbType.NVarChar, this.Schema);
-
-                string cols = String.Format("{0}", dc.ExecuteScalar());
-
-                if (String.IsNullOrWhiteSpace(cols))
-                    throw new ApplicationException(String.Format("Invalid or null column values for {0}", this.objName), new NullReferenceException());
-
-                return cols;
+                _columns = value;
             }
         }
-
+        
         /// <summary>
         /// Get Class Name
         /// </summary>
@@ -189,7 +190,7 @@ namespace CinchORM
         }
 
         private string _objName;        
-        public string objName
+        public string ObjName
         {
             get
             {
@@ -221,11 +222,11 @@ namespace CinchORM
                     objValue = String.Format("{0}", this.Properties[this.PrimaryKey].GetValue(this, null));
                 }
                 catch (Exception) {
-                    throw new ApplicationException(String.Format("Could not parse primary key for {0}", objName), new NullReferenceException());
+                    throw new ApplicationException(String.Format("Could not parse primary key for {0}", ObjName), new NullReferenceException());
                 }
                 
                 if (!int.TryParse(objValue, out _ID))
-                    throw new ApplicationException(String.Format("Could not parse primary key for {0}", objName), new NullReferenceException());
+                    throw new ApplicationException(String.Format("Could not parse primary key for {0}", ObjName), new NullReferenceException());
 
                 return _ID;
             }

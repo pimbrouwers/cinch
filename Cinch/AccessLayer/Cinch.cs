@@ -12,16 +12,29 @@ namespace CinchORM
     /// <summary>
     /// This class encapsulates the components necessary to perform a SQL query
     /// </summary>
-    public class DataConnect : IDisposable
+    public class Cinch : IDisposable
     {
-
         private DataSet ds;
-        private DataTable dt;
         private SqlDataReader dr;
         private SqlDataAdapter da;
         private SqlConnection conn;
         private SqlCommand cmd;
         private SqlTransaction Trans;
+
+        /// <summary>
+        /// Gets/Sets the command timeout for the active connection.
+        /// </summary>
+        public int CommandTimeout
+        {
+            get
+            {
+                return cmd.CommandTimeout;
+            }
+            set
+            {
+                cmd.CommandTimeout = value;
+            }
+        }
 
         /// <summary>
         /// Parameter collection of the underlying sql command object
@@ -42,21 +55,6 @@ namespace CinchORM
         }
 
         /// <summary>
-        /// Gets/Sets the command timeout for the active connection.
-        /// </summary>
-        public int CommandTimeout
-        {
-            get
-            {
-                return cmd.CommandTimeout;
-            }
-            set
-            {
-                cmd.CommandTimeout = value;
-            }
-        }
-
-        /// <summary>
         /// Access the parameters of the underlying command object
         /// </summary>
         public IDataParameter this[string id]
@@ -70,7 +68,10 @@ namespace CinchORM
                 Parameters[id] = value;
             }
         }
-        
+
+        /// <summary>
+        /// Access to cmd Connection
+        /// </summary>
         public SqlConnection Connection
         {
             get
@@ -79,6 +80,9 @@ namespace CinchORM
             }
         }
 
+        /// <summary>
+        /// Raw Connection String
+        /// </summary>
         private string _connectionString;
         public string ConnectionString
         {
@@ -103,12 +107,25 @@ namespace CinchORM
         }
 
         /// <summary>
+        /// Query<T> Constructor
+        /// </summary>
+        /// <param name="connectionString"></param>
+        public Cinch(string connectionString)
+        {
+            ConnectionString = connectionString;
+            SetConnectionString(ConnectionString);
+
+            cmd = new SqlCommand(null, conn);
+            cmd.CommandType = CommandType.Text;
+        }
+
+        /// <summary>
         /// App.Config Connection String Constructor
         /// Fetches
         /// </summary>
-        /// <param name="query">String to hold the query</param>
-        /// <param name="ct">CommandType of the query (usually CommandType.StoredProcedure)</param>
-        public DataConnect(string query, CommandType ct)
+        /// <param name="query">String to hold the query text / Stored Procedure Name</param>
+        /// <param name="ct">CommandType of the query (CommandType.Text / CommandType.StoredProcedure)</param>
+        public Cinch(string query, CommandType ct)
         {
             string connectionString = ConfigurationManager.ConnectionStrings[0].ConnectionString;
             ConnectionString = connectionString;
@@ -122,10 +139,10 @@ namespace CinchORM
         /// <summary>
         /// Runtime Connection String Constructor
         /// </summary>
-        /// <param name="connectionString"></param>
-        /// <param name="query"></param>
-        /// <param name="ct"></param>
-        public DataConnect(string connectionString, string query, CommandType ct)
+        /// <param name="connectionString">Raw Connection String</param>
+        /// <param name="query">String to hold the query text / Stored Procedure Name</param>
+        /// <param name="ct">CommandType of the query (CommandType.Text / CommandType.StoredProcedure)</param>
+        public Cinch(string connectionString, string query, CommandType ct)
         {
             ConnectionString = connectionString;
 
@@ -135,23 +152,276 @@ namespace CinchORM
             cmd.CommandType = ct;
         }
 
+        public IEnumerable<T> Query<T>(string query, object[] param = null, CommandType ct = CommandType.Text) where T : new()
+        {
+            IEnumerable<T> obj = null;
+            CinchMapping mappings = Mapper.MapQuery(query, param);
+            
+            //set query from mapper
+            cmd.CommandText = query;
+            cmd.CommandType = ct;
+
+            //do we have params?
+            if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                this.AddParameters(mappings.SqlParams);
+
+            try
+            {
+                //execute cmd and buffer reader
+                SqlDataReader rd = FillSqlReader();
+                
+                while (rd.Read())
+                {
+                    obj = ConvertReaderToEnumerable<T>(rd);
+                }
+
+                rd.Close();
+
+                return obj;
+            }
+            catch (SqlException sqlEx)
+            {
+                if (sqlEx.Number == 50000)
+                {
+                    DBException dbx = new DBException(sqlEx.Message, sqlEx);
+                    throw dbx;
+                }
+                else
+                {
+                    throw sqlEx;
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                Close();
+            }
+        }
+
+        public int Execute(string query, object[] param = null, CommandType ct = CommandType.Text)
+        {
+            CinchMapping mappings = Mapper.MapQuery(query, param);
+
+            //set query from mapper
+            cmd.CommandText = query;
+            cmd.CommandType = ct;
+
+            //do we have params?
+            if (mappings.SqlParams != null && mappings.SqlParams.Count > 0)
+                this.AddParameters(mappings.SqlParams);
+
+            return this.ExecuteScalarInt();
+        }
+
+        private IEnumerable<T> ConvertReaderToEnumerable<T>(IDataReader rd)
+        {
+            try
+            {
+                Type type = typeof(T);
+
+                if (type.IsPrimitive || type == (typeof(string)))
+                {
+                    //if this is a primitive type, we can't set a property, so simply attemp to use the first value in the row
+                    return (IEnumerable<T>)rd[0];
+                }
+
+                PropertyInfo[] props;
+                ConstructorInfo constr;
+
+                if (!CinchCache._objectPropertyCache.ContainsKey(type.Name))
+                {
+                    props = type.GetProperties();
+                    CinchCache._objectPropertyCache.Add(type.Name, props);
+                }
+                else
+                {
+                    props = CinchCache._objectPropertyCache[type.Name];
+                }
+
+                if (!CinchCache._objectConstructorCache.ContainsKey(type.Name))
+                {
+                    constr = type.GetConstructor(System.Type.EmptyTypes);
+                    CinchCache._objectConstructorCache.Add(type.Name, constr);
+                }
+                else
+                {
+                    constr = CinchCache._objectConstructorCache[type.Name];
+                }
+
+                IEnumerable<T> t = (IEnumerable<T>)constr.Invoke(new object[0]);
+
+                foreach (PropertyInfo prop in props)
+                {
+                    if (!prop.CanWrite) continue;
+
+                    for (int i = 0; i < rd.FieldCount; i++)
+                    {
+                        string fieldName = rd.GetName(i);
+                        if (string.Compare(fieldName, prop.Name, true) == 0)
+                        {
+                            if (!rd.IsDBNull(i))
+                            {
+                                prop.SetValue(t, rd.GetValue(i), null);
+                            }
+                        }
+
+                    }
+                }
+                return t;
+            }
+            catch
+            {
+                
+                throw;
+            }
+        }
+
         /// <summary>
-        /// Destructor for this object.
+        /// Returns a list of objects of the given Type, with propeties set based on how they match up to the fields returned in the recordset.
         /// </summary>
-        public void Dispose()
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        internal List<T> FillList<T>()
         {
-            if (conn != null) conn.Dispose();
+            try
+            {
+
+                SqlDataReader rd = FillSqlReader();
+                List<T> lst = new List<T>();
+                while (rd.Read())
+                {
+                    lst.Add(ConvertReaderToObject<T>(rd));
+                }
+                rd.Close();
+
+                return lst;
+            }
+            catch (SqlException sqlEx)
+            {
+                if (sqlEx.Number == 50000)
+                {
+                    DBException dbx = new DBException(sqlEx.Message, sqlEx);
+                    throw dbx;
+                }
+                else
+                {
+                    throw sqlEx;
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+            finally
+            {
+                Close();
+            }
+
         }
 
         /// <summary>
-        /// Sets up the connection string to the one entered
-        /// </summary>	
-        /// <param name="connStr">The connection string</param>
-        private void SetConnectionString(string connStr)
+        /// Populates a single object of the given Type, with propeties set based on how they match up to the fields returned in the first row of the recordset.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        internal T FillObject<T>()
         {
-            conn = new SqlConnection(connStr);
+            try
+            {
+                SqlDataReader rd = FillSqlReader();
+                T t = default(T);
+                if (rd.Read())
+                {
+                    t = ConvertReaderToObject<T>(rd); ;
+                }
+                rd.Close();
+
+                return t;
+            }
+            catch (SqlException sqlEx)
+            {
+                if (sqlEx.Number == 50000)
+                {
+                    DBException dbx = new DBException(sqlEx.Message, sqlEx);
+                    throw dbx;
+                }
+                else
+                {
+                    throw sqlEx;
+                }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                Close();
+            }
+
         }
 
+        private T ConvertReaderToObject<T>(SqlDataReader rd)
+        {
+
+            Type type = typeof(T);
+
+            if (type.IsPrimitive || type == (typeof(string)))
+            {
+                //if this is a primitive type, we can't set a property, so simply attemp to use the first value in the row
+                return (T)rd[0];
+
+            }
+
+            PropertyInfo[] props;
+            ConstructorInfo constr;
+
+            if (!CinchCache._objectPropertyCache.ContainsKey(type.Name))
+            {
+                props = type.GetProperties();
+                CinchCache._objectPropertyCache.Add(type.Name, props);
+            }
+            else
+            {
+                props = CinchCache._objectPropertyCache[type.Name];
+            }
+
+            if (!CinchCache._objectConstructorCache.ContainsKey(type.Name))
+            {
+                constr = type.GetConstructor(System.Type.EmptyTypes);
+                CinchCache._objectConstructorCache.Add(type.Name, constr);
+            }
+            else
+            {
+                constr = CinchCache._objectConstructorCache[type.Name];
+            }
+            T t = (T)constr.Invoke(new object[0]);
+
+            foreach (PropertyInfo prop in props)
+            {
+                if (!prop.CanWrite) continue;
+
+                for (int i = 0; i < rd.FieldCount; i++)
+                {
+                    string fieldName = rd.GetName(i);
+                    if (string.Compare(fieldName, prop.Name, true) == 0)
+                    {
+                        if (!rd.IsDBNull(i))
+                        {
+
+                            prop.SetValue(t, rd.GetValue(i), null);
+                        }
+                    }
+
+                }
+            }
+            return t;
+        }
+        
         /// <summary>
         /// Returns a data set with the data returned from the query.
         /// </summary>
@@ -237,171 +507,19 @@ namespace CinchORM
         }
 
         /// <summary>
-        /// Returns a list of objects of the given Type, with propeties set based on how they match up to the fields returned in the recordset.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public List<T> FillList<T>()
-        {
-            try
-            {
-
-                SqlDataReader rd = FillSqlReader();
-                List<T> lst = new List<T>();
-                while (rd.Read())
-                {
-                    lst.Add(ConvertReaderToObject<T>(rd));
-                }
-                rd.Close();
-
-                return lst;
-            }
-            catch (SqlException sqlEx)
-            {
-                if (sqlEx.Number == 50000)
-                {
-                    DBException dbx = new DBException(sqlEx.Message, sqlEx);
-                    throw dbx;
-                }
-                else
-                {
-                    throw sqlEx;
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-            finally
-            {
-                Close();
-            }
-
-        }
-
-        /// <summary>
-        /// Populates a single object of the given Type, with propeties set based on how they match up to the fields returned in the first row of the recordset.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public T FillObject<T>()
-        {
-            try
-            {
-
-                SqlDataReader rd = FillSqlReader();
-                T t = default(T);
-                if (rd.Read())
-                {
-                    t = ConvertReaderToObject<T>(rd); ;
-                }
-                rd.Close();
-
-                return t;
-            }
-            catch (SqlException sqlEx)
-            {
-                if (sqlEx.Number == 50000)
-                {
-                    DBException dbx = new DBException(sqlEx.Message, sqlEx);
-                    throw dbx;
-                }
-                else
-                {
-                    throw sqlEx;
-                }
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-            finally
-            {
-                Close();
-            }
-
-        }
-
-        private T ConvertReaderToObject<T>(SqlDataReader rd)
-        {
-
-            Type type = typeof(T);
-
-            if (type.IsPrimitive || type == (typeof(string)))
-            {
-                //if this is a primitive type, we can't set a property, so simply attemp to use the first value in the row
-                return (T)rd[0];
-
-            }
-
-
-            PropertyInfo[] props = type.GetProperties();
-            ConstructorInfo constr = type.GetConstructor(System.Type.EmptyTypes);
-
-            T t = (T)constr.Invoke(new object[0]);
-
-            foreach (PropertyInfo prop in props)
-            {
-                if (!prop.CanWrite) continue;
-
-                for (int i = 0; i < rd.FieldCount; i++)
-                {
-                    string fieldName = rd.GetName(i);
-                    if (string.Compare(fieldName, prop.Name, true) == 0)
-                    {
-                        if (!rd.IsDBNull(i))
-                        {
-
-                            prop.SetValue(t, rd.GetValue(i), null);
-                        }
-                    }
-
-                }
-            }
-            return t;
-        }
-
-        /// <summary>
         /// Fills a dataReader.  Use this for max performance
         /// </summary>
         /// <returns>Returns a SqlDataReader</returns>
-        public SqlDataReader FillSqlReader()
+        private SqlDataReader FillSqlReader()
         {
-            try
-            {
-                //verbose output
-                //VerboseOutput();
-
-                this.Open();
-
-                dr = cmd.ExecuteReader();
-                return dr;
-            }
-            catch (SqlException sqlEx)
-            {
-                if (sqlEx.Number == 50000)
-                {
-                    DBException dbx = new DBException(sqlEx.Message, sqlEx);
-                    throw dbx;
-                }
-                else
-                {
-                    throw sqlEx;
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
+            return FillIDataReader() as SqlDataReader;
         }
-        
+
         /// <summary>
         /// Fills a dataReader.  Use this for max performance
         /// </summary>
         /// <returns>Returns an IDataReader</returns>
-        public IDataReader FillIDataReader()
+        private IDataReader FillIDataReader()
         {
             try
             {
@@ -434,7 +552,7 @@ namespace CinchORM
         /// <summary>
         /// Runs the query.  Usually used for udpate commands
         /// </summary>
-        public void ExecuteNonQuery()
+        internal void ExecuteNonQuery()
         {
 
             try
@@ -478,7 +596,7 @@ namespace CinchORM
         /// Execute the command and return an object
         /// </summary>
         /// <returns>An Object</returns>
-        public Object ExecuteScalar()
+        internal Object ExecuteScalar()
         {
             Object rv = new Object();
             try
@@ -523,7 +641,7 @@ namespace CinchORM
         /// Execute the command and return an object
         /// </summary>
         /// <returns>An Object</returns>
-        public int ExecuteScalarInt()
+        internal int ExecuteScalarInt()
         {
             Object rv = ExecuteScalar();
 
@@ -538,31 +656,12 @@ namespace CinchORM
         }
 
         /// <summary>
-        /// Sets the text based query for the DataConnect object
-        /// </summary>
-        /// <param name="query">A string representing the query to be executed</param>
-        public void SetQuery(string query)
+        /// Sets up the connection string to the one entered
+        /// </summary>	
+        /// <param name="connStr">The connection string</param>
+        private void SetConnectionString(string connStr)
         {
-            cmd.CommandText = query;
-            cmd.CommandType = CommandType.Text;
-        }
-
-        /// <summary>
-        /// Sets up a stored procedure to be executed
-        /// </summary>
-        /// <param name="sproc">The stored procedure to be run</param>
-        public void SetStoredProcedure(string sproc)
-        {
-            cmd.CommandText = sproc;
-            cmd.CommandType = CommandType.StoredProcedure;
-        }
-        /// <summary>
-        /// Sets up the CommandType after the class has already been created
-        /// </summary>
-        /// <param name="ct">CommandType being set to</param>
-        public void SetCommandType(CommandType ct)
-        {
-            cmd.CommandType = ct;
+            conn = new SqlConnection(connStr);
         }
 
         /// <summary>
@@ -573,62 +672,6 @@ namespace CinchORM
         public void AddParameter(string id, SqlDbType type)
         {
             cmd.Parameters.Add(id, type);
-        }
-
-        /// <summary>
-        /// Adds an input/output parameter to the command
-        /// This parameter can accept and return values
-        /// </summary>
-        /// <param name="id">ID of the parameter to be created</param>
-        /// <param name="type">SqlDbType of the parameter</param>
-        /// <param name="value">The value of the parameter</param>
-        public void AddOutputParameter(string id, SqlDbType type, object value)
-        {
-            SqlParameter param = cmd.Parameters.Add(id, type);
-            param.Direction = ParameterDirection.InputOutput;
-            param.Value = value;
-
-        }
-
-        /// <summary>
-        /// Adds an output parameter to the command
-        /// This parameter can only return values
-        /// </summary>
-        /// <param name="id">ID of the parameter to be created</param>
-        /// <param name="type">SqlDbType of the parameter</param>		
-        public void AddOutputParameter(string id, SqlDbType type)
-        {
-            SqlParameter param = cmd.Parameters.Add(id, type);
-            param.Direction = ParameterDirection.InputOutput;
-
-        }
-
-
-        /// <summary>
-        /// Returns the value of an output parameter.
-        /// </summary>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public object GetOutputParameterValue(string id)
-        {
-            if (cmd.Parameters.Contains(id))
-            {
-                return cmd.Parameters[id].Value;
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// Returns the value of an output parameter in the desired type.  If the output is not in the desired type, of it is null, the default value for that Type will be returned (ie: null for reference types, 0 for int, etc).
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id"></param>
-        /// <returns></returns>
-        public T GetOutputParameterValue<T>(string id)
-        {
-            object o = GetOutputParameterValue(id);
-            if (o is T) return (T)o;
-            return default(T);
         }
 
         /// <summary>
@@ -646,7 +689,7 @@ namespace CinchORM
             // set the value of the parameter
             cmd.Parameters[id].Value = Value;
         }
-        
+
         /// <summary>
         /// Sets up a parameter for the query
         /// </summary>
@@ -684,7 +727,7 @@ namespace CinchORM
         /// <param name="sqlParams"></param>
         public void AddParameters(List<SqlParameter> sqlParams)
         {
-            if(sqlParams != null && sqlParams.Count > 0)
+            if (sqlParams != null && sqlParams.Count > 0)
                 cmd.Parameters.AddRange(sqlParams.ToArray());
         }
 
@@ -700,7 +743,7 @@ namespace CinchORM
             else
                 cmd.Parameters[id].Value = val;
         }
-        
+
         /// <summary>
         /// Used to clear out all of the parameters
         /// </summary>
@@ -710,40 +753,60 @@ namespace CinchORM
         }
 
         /// <summary>
-        /// Opens the database connection.
+        /// Adds an input/output parameter to the command
+        /// This parameter can accept and return values
         /// </summary>
-        public void Open()
+        /// <param name="id">ID of the parameter to be created</param>
+        /// <param name="type">SqlDbType of the parameter</param>
+        /// <param name="value">The value of the parameter</param>
+        public void AddOutputParameter(string id, SqlDbType type, object value)
         {
-            if (conn.State == ConnectionState.Closed)
-                conn.Open();
+            SqlParameter param = cmd.Parameters.Add(id, type);
+            param.Direction = ParameterDirection.InputOutput;
+            param.Value = value;
+
         }
 
         /// <summary>
-        /// Closes the database connection.
+        /// Adds an output parameter to the command
+        /// This parameter can only return values
         /// </summary>
-        public void Close()
+        /// <param name="id">ID of the parameter to be created</param>
+        /// <param name="type">SqlDbType of the parameter</param>		
+        public void AddOutputParameter(string id, SqlDbType type)
         {
-            if (conn != null)
-            {
-                conn.Close();
-            }
+            SqlParameter param = cmd.Parameters.Add(id, type);
+            param.Direction = ParameterDirection.InputOutput;
+
         }
 
         /// <summary>
-        /// Closes the database connection with option commit parameter.
+        /// Returns the value of an output parameter.
         /// </summary>
-        public void Close(bool commitChanges)
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public object GetOutputParameterValue(string id)
         {
-            if (conn != null)
+            if (cmd.Parameters.Contains(id))
             {
-                if (commitChanges)
-                {
-                    CommitTransaction();
-                }
-                conn.Close();
+                return cmd.Parameters[id].Value;
             }
+            return null;
         }
 
+        /// <summary>
+        /// Returns the value of an output parameter in the desired type.  If the output is not in the desired type, of it is null, the default value for that Type will be returned (ie: null for reference types, 0 for int, etc).
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public T GetOutputParameterValue<T>(string id)
+        {
+            object o = GetOutputParameterValue(id);
+            if (o is T) return (T)o;
+            return default(T);
+        }
+        
         /// <summary>
         /// This starts a transaction, can manually rollback or commit and on close with automatically commit.
         /// </summary>
@@ -820,6 +883,48 @@ namespace CinchORM
             return output.ToString();
         }
 
+        /// <summary>
+        /// Opens the database connection.
+        /// </summary>
+        internal void Open()
+        {
+            if (conn.State == ConnectionState.Closed)
+                conn.Open();
+        }
+
+        /// <summary>
+        /// Closes the database connection.
+        /// </summary>
+        internal void Close()
+        {
+            if (conn != null)
+            {
+                conn.Close();
+            }
+        }
+
+        /// <summary>
+        /// Closes the database connection with option commit parameter.
+        /// </summary>
+        internal void Close(bool commitChanges)
+        {
+            if (conn != null)
+            {
+                if (commitChanges)
+                {
+                    CommitTransaction();
+                }
+                conn.Close();
+            }
+        }
+
+        /// <summary>
+        /// Destructor for this object.
+        /// </summary>
+        public void Dispose()
+        {
+            if (conn != null) conn.Dispose();
+        }
 
     }
 }

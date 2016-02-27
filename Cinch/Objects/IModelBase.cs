@@ -16,9 +16,8 @@ namespace CinchORM
         string TableNameFullyQualified { get; }
 
         string Schema { get; }
-        
+
         string ColumnsFullyQualified { get; }
-        string GetColumns();
-        
+                
     }
 }

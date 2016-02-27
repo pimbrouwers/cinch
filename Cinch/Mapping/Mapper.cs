@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace CinchORM
 {
+
     public class CinchMapping
     {
         public List<string> Columns { get; set; }
@@ -66,72 +67,129 @@ namespace CinchORM
 
     public static class Mapper
     {
-        public static CinchMapping MapProperties<T>(T obj, List<string> cols = null) where T : IModelBase
+        internal static Dictionary<string, CinchMapping> _cinchMappingCache = new Dictionary<string, CinchMapping>();
+        
+        public static CinchMapping MapProperties<T>(T obj, List<string> cols = null) where T : ModelBase
         {
-            PropertyInfo[] props = obj.GetType().GetProperties();
-            List<string> columns = new List<string>();
-            List<string> valuesQueryParams = new List<string>();
-            List<SqlParameter> sqlParams = new List<SqlParameter>();
+            string cacheKey = String.Format("{0}_{1}", obj.ObjName, String.Join("-", cols.ToArray()));
+            CinchMapping cinchMapping = null;
 
-            int i = 1;
-            foreach (PropertyInfo prop in props)
+            if(!_cinchMappingCache.ContainsKey(cacheKey))
             {
-                if (prop.Attributes.GetAttributeFrom<CinchIgnoreAttribute>(prop) != null ||
-                    prop.DeclaringType == typeof(ModelBase) ||
-                    (cols != null && cols.Contains(prop.Name)))
-                    continue;
+                PropertyInfo[] props = obj.GetType().GetProperties();
+                List<string> columns = new List<string>();
+                List<string> valuesQueryParams = new List<string>();
+                List<SqlParameter> sqlParams = new List<SqlParameter>();
+
+                int i = 1;
+                foreach (PropertyInfo prop in props)
+                {
+                    if (prop.Attributes.GetAttributeFrom<CinchIgnoreAttribute>(prop) != null ||
+                        prop.DeclaringType == typeof(ModelBase) ||
+                        (cols != null && cols.Contains(prop.Name)))
+                        continue;
 
 #if NET40
-                object value = prop.GetValue(obj, null);
+                    object value = prop.GetValue(obj, null);
 #else
                 object value = prop.GetValue(obj);
 #endif
 
-                if (value == null)
-                    continue;
+                    if (value == null)
+                        continue;
 
-                Type t = prop.PropertyType;
-                string placeholder = String.Format("val{0}", i);
+                    Type t = prop.PropertyType;
+                    string placeholder = String.Format("val{0}", i);
 
-                columns.Add(String.Format("{0}{1}{2}", SpecialCharacters.ColumnBegin, prop.Name, SpecialCharacters.ColumnEnd));
-                valuesQueryParams.Add(String.Format("{0}{1}", SpecialCharacters.ParamPrefix, placeholder));
+                    columns.Add(String.Format("{0}{1}{2}", SpecialCharacters.ColumnBegin, prop.Name, SpecialCharacters.ColumnEnd));
+                    valuesQueryParams.Add(String.Format("{0}{1}", SpecialCharacters.ParamPrefix, placeholder));
 
-                sqlParams.AddParameter(placeholder, Conversion.GetSqlDbType(t), value);
-              
-                i++;
+                    sqlParams.AddParameter(placeholder, Conversion.GetSqlDbType(t), value);
+
+                    i++;
+                }
+
+                cinchMapping = new CinchMapping()
+                {
+                    Columns = columns,
+                    ValuesQueryParams = valuesQueryParams,
+                    SqlParams = sqlParams
+                };
+
+                _cinchMappingCache.Add(cacheKey, cinchMapping);
+            }
+            else
+            {
+                cinchMapping = _cinchMappingCache[cacheKey];
             }
 
-            return new CinchMapping() { 
-                Columns = columns,
-                ValuesQueryParams = valuesQueryParams,
-                SqlParams = sqlParams
-            };
+            return cinchMapping;
         }
 
         public static CinchMapping MapQuery<T>(T obj, string query, object[] param) where T : ModelBase
         {
-            CinchMapping mapping = new CinchMapping() { QueryString = query };
+            string cacheKey = String.Format("{0}_{1}_{2}", obj.ObjName, query, String.Join("-", param));
+            CinchMapping cinchMapping = null;
 
-            //no where clause
-            if (String.IsNullOrWhiteSpace(query))
-                return mapping;
-            
-            if(param != null && param.Count() > 0)
+            if(!_cinchMappingCache.ContainsKey(cacheKey))
             {
-                //where clause has params, but no param values were passed in.
-                if (!String.IsNullOrWhiteSpace(query) && query.IndexOf('@') > -1 && param.Count() <= 0)
-                    throw new ApplicationException(String.Format("Could not execute Find for {0} because the parameters array is empty", obj.objName), new NullReferenceException());
-                //param counts don't match
-                else if (query.Count(c => c == '@') != param.Count())
-                    throw new ApplicationException(String.Format("Could not execute Find for {0} because the number of parameters in the where clause and parameters array do not match", obj.objName), new NullReferenceException());
+                cinchMapping = new CinchMapping() { QueryString = query };
+                
+                if (param != null && param.Count() > 0)
+                {
+                    //where clause has params, but no param values were passed in.
+                    if (!String.IsNullOrWhiteSpace(query) && query.IndexOf('@') > -1 && param.Count() <= 0)
+                        throw new ApplicationException(String.Format("Could not execute Find for {0} because the parameters array is empty", obj.ObjName), new NullReferenceException());
+                    //param counts don't match
+                    else if (query.Count(c => c == '@') != param.Count())
+                        throw new ApplicationException(String.Format("Could not execute Find for {0} because the number of parameters in the where clause and parameters array do not match", obj.ObjName), new NullReferenceException());
 
-                List<SqlParameter> sqlParams = BuildParamsFromString(query, param);
+                    List<SqlParameter> sqlParams = BuildParamsFromString(query, param);
 
-                mapping.SqlParams = sqlParams;
+                    cinchMapping.SqlParams = sqlParams;
+                }
+
+                _cinchMappingCache.Add(cacheKey, cinchMapping);
+            }
+            else
+            {
+                cinchMapping = _cinchMappingCache[cacheKey];
             }
             
+            return cinchMapping;
+        }
 
-            return mapping;
+        public static CinchMapping MapQuery(string query, object[] param)
+        {
+            string cacheKey = String.Format("{0}_{1}", query, String.Join("-", param));
+            CinchMapping cinchMapping = null;
+
+            if (!_cinchMappingCache.ContainsKey(cacheKey))
+            {
+                cinchMapping = new CinchMapping() { QueryString = query };
+
+                if (param != null && param.Count() > 0)
+                {
+                    //where clause has params, but no param values were passed in.
+                    if (!String.IsNullOrWhiteSpace(query) && query.IndexOf('@') > -1 && param.Count() <= 0)
+                        throw new ApplicationException(String.Format("Could not execute Find for \"{0}\" because the parameters array is empty", query), new NullReferenceException());
+                    //param counts don't match
+                    else if (query.Count(c => c == '@') != param.Count())
+                        throw new ApplicationException(String.Format("Could not execute Find for \"{0}\" because the number of parameters in the where clause and parameters array do not match", query), new NullReferenceException());
+
+                    List<SqlParameter> sqlParams = BuildParamsFromString(query, param);
+
+                    cinchMapping.SqlParams = sqlParams;
+                }
+
+                _cinchMappingCache.Add(cacheKey, cinchMapping);
+            }
+            else
+            {
+                cinchMapping = _cinchMappingCache[cacheKey];
+            }
+
+            return cinchMapping;
         }
 
         private static List<SqlParameter> BuildParamsFromString(string query, object[] param)
