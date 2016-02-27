@@ -9,49 +9,6 @@ namespace CinchORM
 {
     public static class Conversion
     {
-        //public object ResolvePropertyValue(Type type, object value)
-        //{
-        //    TypeCode typeCode = Type.GetTypeCode(type);
-        //    string strVal = String.Format("{0}", value);
-        //    switch (typeCode)
-        //    {
-        //        case TypeCode.Int64:
-        //            Int64 int64Test;
-        //            if (!Int64.TryParse(strVal, out int64Test))
-        //                throw new ApplicationException("could not resolve value type");
-        //            else
-        //                return int64Test;
-
-        //        case TypeCode.Boolean:
-        //            Int64 boolTest;
-        //            if (!Int64.TryParse(strVal, out boolTest))
-        //                throw new ApplicationException("could not resolve value type");
-        //            else
-        //                return boolTest;
-
-        //        case TypeCode.String:
-        //            return strVal;
-
-        //        case TypeCode.DateTime:
-        //            return SqlDbType.DateTime;
-
-        //        case TypeCode.Double:
-        //            return SqlDbType.Float;
-
-        //        case TypeCode.Decimal:
-        //            return SqlDbType.Decimal;
-
-        //        case TypeCode.Int16:
-        //        case TypeCode.Int32:
-        //            return SqlDbType.Int;
-
-        //        case TypeCode.Byte:
-        //            return SqlDbType.TinyInt;
-
-        //        default:
-        //            throw new ArgumentOutOfRangeException("clr type");
-        //    }
-        //}
 
         public static SqlDbType GetSqlDbType(Type type)
         {

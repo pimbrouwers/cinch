@@ -70,8 +70,7 @@ namespace CinchORM
                 Parameters[id] = value;
             }
         }
-
-
+        
         public SqlConnection Connection
         {
             get
@@ -88,28 +87,60 @@ namespace CinchORM
                 if (!String.IsNullOrWhiteSpace(_connectionString))
                     return _connectionString;
 
-                string appConnStr = ConfigurationManager.ConnectionStrings["DataContext"].ConnectionString;
+                string appConnStr = ConfigurationManager.ConnectionStrings[0].ConnectionString;
 
                 if (!String.IsNullOrWhiteSpace(appConnStr))
                     _connectionString = appConnStr;
                 else
-                    throw new ApplicationException("Connection string with key \"DataContext\" is not configured");
+                    throw new ApplicationException("No connection strings have been specified");
 
                 return _connectionString;
+            }
+            set
+            {
+                _connectionString = value;
             }
         }
 
         /// <summary>
-        /// Used for Stored Procedures
+        /// App.Config Connection String Constructor
+        /// Fetches
         /// </summary>
         /// <param name="query">String to hold the query</param>
-        /// <param name="connStr">Connection string value from within web.config.</param>
         /// <param name="ct">CommandType of the query (usually CommandType.StoredProcedure)</param>
         public DataConnect(string query, CommandType ct)
         {
+            string connectionString = ConfigurationManager.ConnectionStrings[0].ConnectionString;
+            ConnectionString = connectionString;
+
             SetConnectionString(ConnectionString);
+
             cmd = new SqlCommand(query, conn);
             cmd.CommandType = ct;
+        }
+
+        /// <summary>
+        /// Runtime Connection String Constructor
+        /// </summary>
+        /// <param name="connectionString"></param>
+        /// <param name="query"></param>
+        /// <param name="ct"></param>
+        public DataConnect(string connectionString, string query, CommandType ct)
+        {
+            ConnectionString = connectionString;
+
+            SetConnectionString(ConnectionString);
+
+            cmd = new SqlCommand(query, conn);
+            cmd.CommandType = ct;
+        }
+
+        /// <summary>
+        /// Destructor for this object.
+        /// </summary>
+        public void Dispose()
+        {
+            if (conn != null) conn.Dispose();
         }
 
         /// <summary>
@@ -119,14 +150,6 @@ namespace CinchORM
         private void SetConnectionString(string connStr)
         {
             conn = new SqlConnection(connStr);
-        }
-
-        /// <summary>
-        /// Destructor for this object.
-        /// </summary>
-        public void Dispose()
-        {
-            if (conn != null) conn.Dispose();
         }
 
         /// <summary>
@@ -146,7 +169,7 @@ namespace CinchORM
                 da.SelectCommand = cmd;
 
                 //verbose output
-                VerboseOutput();
+                //VerboseOutput();
 
                 // run the fill query
                 da.Fill(ds, tableName);
@@ -188,7 +211,7 @@ namespace CinchORM
                 da.SelectCommand = cmd;
 
                 //verbose output
-                VerboseOutput();
+                //VerboseOutput();
 
                 // run the fill query
                 da.Fill(ds);
@@ -211,58 +234,6 @@ namespace CinchORM
 
                 throw;
             }
-        }
-
-
-        /// <summary>
-        /// Fill a dataset with only the schema information from a query
-        /// </summary>
-        /// <returns>DataSet with Schema</returns>
-        public DataSet FillSchemaOnly()
-        {
-            try
-            {
-                // set up the dataset
-                ds = new DataSet();
-
-                // set up the adapter 
-                da = new SqlDataAdapter();
-                da.SelectCommand = cmd;
-
-                //verbose output
-                VerboseOutput();
-
-                // run the fill query
-                da.FillSchema(ds, SchemaType.Source);
-                return ds;
-            }
-            catch (SqlException sqlEx)
-            {
-                if (sqlEx.Number == 50000)
-                {
-                    DBException dbx = new DBException(sqlEx.Message, sqlEx);
-                    throw dbx;
-                }
-                else
-                {
-                    throw sqlEx;
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Returns a data table with the data returned from the query.
-        /// </summary>
-        /// <returns>DataTable containing results from query.</returns>
-        public DataTable FillTable()
-        {
-
-            return FillTable("");
         }
 
         /// <summary>
@@ -392,107 +363,6 @@ namespace CinchORM
         }
 
         /// <summary>
-        /// Convert a DataTable to a generic list of objects Type T based on the Reflected properties of T.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="dt"></param>
-        /// <returns></returns>
-        public static List<T> ConvertDataTableToList<T>(DataTable dt)
-        {
-
-            List<T> lst = new List<T>();
-
-            if (dt != null && dt.Rows.Count > 0)
-            {
-                foreach (DataRow row in dt.Rows)
-                {
-                    lst.Add(ConvertDataRowToObject<T>(row));
-                }
-            }
-
-            return lst;
-
-        }
-
-        /// <summary>
-        /// Converts a DataRow to an object of Type T based on the Reflected properties of T.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="row"></param>
-        /// <returns></returns>
-        public static T ConvertDataRowToObject<T>(DataRow row)
-        {
-
-            if (row.Table == null)
-            {
-                throw new ArgumentException("Row must belong to a parent table.", "row");
-            }
-            Type type = typeof(T);
-            PropertyInfo[] props = type.GetProperties();
-            ConstructorInfo constr = type.GetConstructor(System.Type.EmptyTypes);
-            if (constr == null)
-            {
-                throw new ArgumentException("The provided type does not have a default constructor.");
-            }
-
-            T t = (T)constr.Invoke(new object[0]);
-
-            foreach (PropertyInfo prop in props)
-            {
-                if (!prop.CanWrite) continue;
-
-                if (row.Table.Columns.Contains(prop.Name) && !row.IsNull(prop.Name))
-                {
-                    prop.SetValue(t, row[prop.Name], null);
-                }
-
-            }
-            return t;
-        }
-
-        /// <summary>
-        /// Returns a named data table with the data returned from the query.
-        /// </summary>		
-        /// <param name="tableName"></param>
-        /// <returns>DataTable containing results from query.</returns>
-        public DataTable FillTable(string tableName)
-        {
-            try
-            {
-                // set up the dataset
-                dt = new DataTable(tableName);
-
-                // set up the adapter 
-                da = new SqlDataAdapter();
-                da.SelectCommand = cmd;
-
-                //verbose output
-                VerboseOutput();
-
-                // run the fill query
-                da.Fill(dt);
-                return dt;
-            }
-            catch (SqlException sqlEx)
-            {
-                if (sqlEx.Number == 50000)
-                {
-                    DBException dbx = new DBException(sqlEx.Message, sqlEx);
-                    throw dbx;
-                }
-                else
-                {
-                    throw sqlEx;
-                }
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-        }
-
-        /// <summary>
         /// Fills a dataReader.  Use this for max performance
         /// </summary>
         /// <returns>Returns a SqlDataReader</returns>
@@ -501,7 +371,7 @@ namespace CinchORM
             try
             {
                 //verbose output
-                VerboseOutput();
+                //VerboseOutput();
 
                 this.Open();
 
@@ -526,8 +396,7 @@ namespace CinchORM
                 throw;
             }
         }
-
-
+        
         /// <summary>
         /// Fills a dataReader.  Use this for max performance
         /// </summary>
@@ -537,7 +406,7 @@ namespace CinchORM
             try
             {
                 //verbose output
-                VerboseOutput();
+                //VerboseOutput();
 
                 this.Open();
                 dr = cmd.ExecuteReader();
@@ -560,59 +429,6 @@ namespace CinchORM
 
                 throw;
             }
-        }
-
-        /// <summary>
-        /// Close the the Reader Connection.
-        /// </summary>
-        /// <remarks>
-        /// The reader must always be closed after use.
-        /// </remarks>
-        public void CloseReader()
-        {
-            try
-            {
-                //MODIFIED: Mike 04/04/2005: removed the Close() call that closed the whole connection
-                //This made it impossible to use the reader in a transaction
-                dr.Close();
-            }
-            catch
-            {
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Sets the text based query for the DataConnect object
-        /// </summary>
-        /// <param name="query">A string representing the query to be executed</param>
-        public void SetQuery(string query)
-        {
-            cmd.CommandText = query;
-            cmd.CommandType = CommandType.Text;
-        }
-
-        /// <summary>
-        /// Sets up a stored procedure to be executed
-        /// </summary>
-        /// <param name="sproc">The stored procedure to be run</param>
-        public void SetStoredProcedure(string sproc)
-        {
-            cmd.CommandText = sproc;
-            cmd.CommandType = CommandType.StoredProcedure;
-        }
-        /// <summary>
-        /// Sets up the CommandType after the class has already been created
-        /// </summary>
-        /// <param name="ct">CommandType being set to</param>
-        public void SetCommandType(CommandType ct)
-        {
-            cmd.CommandType = ct;
-        }
-        
-        public void PrepareQuery()
-        {
-            cmd.Prepare();
         }
 
         /// <summary>
@@ -625,7 +441,7 @@ namespace CinchORM
             {
 
                 //verbose output
-                VerboseOutput();
+                //VerboseOutput();
 
                 Open();
                 // run the query
@@ -668,7 +484,7 @@ namespace CinchORM
             try
             {
                 //verbose output
-                VerboseOutput();
+                //VerboseOutput();
 
                 Open();
 
@@ -709,42 +525,7 @@ namespace CinchORM
         /// <returns>An Object</returns>
         public int ExecuteScalarInt()
         {
-            Object rv = new Object();
-            try
-            {
-                //verbose output
-                VerboseOutput();
-
-                Open();
-
-                // run the query and return the value
-                rv = cmd.ExecuteScalar();
-
-            }
-            catch (SqlException sqlEx)
-            {
-                if (sqlEx.Number == 50000)
-                {
-                    DBException dbx = new DBException(sqlEx.Message, sqlEx);
-                    throw dbx;
-                }
-                else
-                {
-                    throw sqlEx;
-                }
-            }
-            catch
-            {
-
-                throw;
-            }
-            finally
-            {
-                if (cmd.Transaction == null)
-                {
-                    Close();
-                }
-            }
+            Object rv = ExecuteScalar();
 
             int result;
             if (int.TryParse(String.Format("{0}", rv), out result))
@@ -757,6 +538,34 @@ namespace CinchORM
         }
 
         /// <summary>
+        /// Sets the text based query for the DataConnect object
+        /// </summary>
+        /// <param name="query">A string representing the query to be executed</param>
+        public void SetQuery(string query)
+        {
+            cmd.CommandText = query;
+            cmd.CommandType = CommandType.Text;
+        }
+
+        /// <summary>
+        /// Sets up a stored procedure to be executed
+        /// </summary>
+        /// <param name="sproc">The stored procedure to be run</param>
+        public void SetStoredProcedure(string sproc)
+        {
+            cmd.CommandText = sproc;
+            cmd.CommandType = CommandType.StoredProcedure;
+        }
+        /// <summary>
+        /// Sets up the CommandType after the class has already been created
+        /// </summary>
+        /// <param name="ct">CommandType being set to</param>
+        public void SetCommandType(CommandType ct)
+        {
+            cmd.CommandType = ct;
+        }
+
+        /// <summary>
         /// Adds a parameter to the command
         /// </summary>
         /// <param name="id">ID of the parameter to be created</param>
@@ -765,7 +574,6 @@ namespace CinchORM
         {
             cmd.Parameters.Add(id, type);
         }
-
 
         /// <summary>
         /// Adds an input/output parameter to the command
@@ -995,19 +803,10 @@ namespace CinchORM
         }
 
         /// <summary>
-        /// Trace the values of this sql object
-        /// </summary>		
-        public void VerboseOutput()
-        {
-
-            //only proceed if we have a command object
-            if (cmd == null) return;
-
-            //only write this out in verbose mode
-            //do some logging
-        }
-
-        private string GetTraceOutputs()
+        /// DEBUGGER
+        /// </summary>
+        /// <returns></returns>
+        public string GetTraceOutputs()
         {
             StringBuilder output = new StringBuilder();
             output.Append(cmd.CommandType).Append(": ");

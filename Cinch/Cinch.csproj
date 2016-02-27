@@ -51,10 +51,6 @@
     <DocumentationFile>bin\Release\net45\Cinch.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -67,8 +63,7 @@
   <ItemGroup>
     <Compile Include="AccessLayer\DataConnect.cs" />
     <Compile Include="AccessLayer\DBException.cs" />
-    <Compile Include="AccessLayer\Inflector.cs" />
-    <Compile Include="AccessLayer\Mapper.cs" />
+    <Compile Include="Mapping\Mapper.cs" />
     <Compile Include="AccessLayer\Queries.cs" />
     <Compile Include="AccessLayer\SpecialCharacters.cs" />
     <Compile Include="Attributes\CinchIgnore.cs" />

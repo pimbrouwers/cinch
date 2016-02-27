@@ -6,31 +6,32 @@ using System.Threading.Tasks;
 using System.Data;
 using System.Reflection;
 using System.Data.SqlClient;
-using Newtonsoft.Json;
 
 namespace CinchORM
 {
     public abstract class ModelBase : IModelBase
     {
         protected virtual string primaryKey { get; set; }
-
-        [JsonIgnore]
+        private string _primaryKey;        
         public string PrimaryKey
         {
             get
             {
-                if (String.IsNullOrWhiteSpace(primaryKey))
+                if(String.IsNullOrWhiteSpace(_primaryKey))
                 {
-                    string singular = objName.Singularize();
-                    string titleCase = (String.IsNullOrWhiteSpace(singular)) ? objName.Pascalize() : singular.Pascalize();
-                    primaryKey = String.Format("{0}ID", (String.IsNullOrWhiteSpace(titleCase) ? objName : titleCase));
+                    if (String.IsNullOrWhiteSpace(primaryKey))
+                    {
+                        _primaryKey = String.Format("{0}_id", TableName.ToLowerInvariant());
+                    }
+                    else
+                    {
+                        _primaryKey = primaryKey;
+                    }
                 }
 
-                return primaryKey;
+                return _primaryKey;
             }
-        }
-
-        [JsonIgnore]
+        }        
         public string PrimaryKeyFullyQualified
         {
             get
@@ -43,25 +44,23 @@ namespace CinchORM
         /// TABLE NAME
         /// </summary>
         protected virtual string tableName { get; set; }
-
-        [JsonIgnore]
+        private string _tableName;        
         public string TableName
         {
             get
             {
-                
                 if (String.IsNullOrWhiteSpace(tableName))
                 {
-                    string plural = objName.Pluralize();
-                    string titleCase = (String.IsNullOrWhiteSpace(plural)) ? objName.Pascalize() : plural.Pascalize();
-                    return (String.IsNullOrWhiteSpace(titleCase) ? objName : titleCase);
+                    _tableName = this.ObjType.Name;
                 }
-
-                return tableName;
+                else
+                {
+                    _tableName = tableName;
+                }
+                
+                return _tableName;
             }
-        }
-
-        [JsonIgnore]
+        }        
         public string TableNameFullyQualified
         {
             get
@@ -74,59 +73,46 @@ namespace CinchORM
         /// SCHEMA
         /// </summary>
         protected virtual string schema { get; set; }
-
-        [JsonIgnore]
+        private string _schema;        
         public string Schema
         {
             get
             {
-                if (String.IsNullOrWhiteSpace(schema))
-                    return GetSchema();
-                else
-                    return schema;
-            }
-        }
-
-        public string GetSchema()
-        {
-            try
-            {
-                using (DataConnect dc = new DataConnect(Queries.GetSchema, CommandType.Text))
+                if (String.IsNullOrWhiteSpace(_schema))
                 {
-                    dc.SetQuery(Queries.GetSchema);
-                    dc.AddParameter("table", SqlDbType.NVarChar, this.TableName);
+                    if(String.IsNullOrWhiteSpace(schema))
+                    {
+                        try
+                        {
+                            using (DataConnect dc = new DataConnect(Queries.GetSchema, CommandType.Text))
+                            {
+                                dc.SetQuery(Queries.GetSchema);
+                                dc.AddParameter("table", SqlDbType.NVarChar, this.TableName);
 
-                    string sch = String.Format("{0}", dc.ExecuteScalar());
+                                _schema = String.Format("{0}", dc.ExecuteScalar());
 
-                    if (String.IsNullOrWhiteSpace(sch))
-                        throw new ApplicationException(String.Format("Invalid or null schema for {0}. Does the table exist?", this.objName), new NullReferenceException());
+                                if (String.IsNullOrWhiteSpace(_schema))
+                                    throw new ApplicationException(String.Format("Invalid or null schema for {0}. Does the table exist?", this.objName), new NullReferenceException());
 
-                    return sch;
-                }
-            }
-            catch (SqlException ex)
-            {
-                throw new ApplicationException(String.Format("The database table {0} probably doesn't exist.", this.TableName), ex);
-            }
-
-        }
-
-        /// <summary>
-        /// DISPLAY FIELD (for listing query)
-        /// </summary>
-        protected virtual string displayField { get; set; }
-
-        [JsonIgnore]
-        public string DisplayField
-        {
-            get
-            {
-                if (String.IsNullOrWhiteSpace(displayField))
-                {
-                    throw new ApplicationException(String.Format("You must specify a 'DisplayField' for {0}", objName), new NullReferenceException());
+                            }
+                        }
+                        catch (SqlException ex)
+                        {
+                            throw new ApplicationException(String.Format("The database table {0} probably doesn't exist.", this.TableName), ex);
+                        }
+                    }
+                    else
+                    {
+                        _schema = schema;
+                    }
                 }
 
-                return displayField;
+                
+                return _schema;
+            }
+            set
+            {
+                _schema = value;
             }
         }
 
@@ -144,8 +130,6 @@ namespace CinchORM
                 return columns.StringToStringList(',').Select(c => c.Substring(c.IndexOf('.') + 1)).ToList(); 
             } 
         }
-        
-        [JsonIgnore]
         public string ColumnsFullyQualified
         {
             get
@@ -176,17 +160,43 @@ namespace CinchORM
         /// <summary>
         /// Get Class Name
         /// </summary>
-        private string _objName;
+        private Type _objType;        
+        public Type ObjType {
+            get
+            {
+                if(_objType == null)
+                {
+                    Type type = this.GetType();
+                    _objType = type;
+                }
 
-        [JsonIgnore]
+                return _objType;
+            }
+        }
+
+        private Dictionary<string, PropertyInfo> _properties;
+        public Dictionary<string, PropertyInfo> Properties
+        {
+            get
+            {
+                if(_properties == null)
+                {
+                    _properties = ObjType.GetProperties().ToDictionary(p => p.Name, p => p);
+                }
+
+                return _properties;
+            }
+        }
+
+        private string _objName;        
         public string objName
         {
             get
             {
-                if (!String.IsNullOrWhiteSpace(_objName))
-                    return _objName;
-
-                _objName = this.GetType().Name;
+                if (String.IsNullOrWhiteSpace(_objName))
+                {
+                    _objName = ObjType.Name;
+                }
 
                 return _objName;
             }
@@ -195,9 +205,7 @@ namespace CinchORM
         /// <summary>
         /// ID
         /// </summary>
-        private int _ID;
-
-        [JsonIgnore]
+        private int _ID;        
         public int ID
         {
             get
@@ -210,7 +218,7 @@ namespace CinchORM
                 string objValue = null;
 
                 try {
-                    objValue = String.Format("{0}", this.GetType().GetProperty(this.PrimaryKey).GetValue(this, null));
+                    objValue = String.Format("{0}", this.Properties[this.PrimaryKey].GetValue(this, null));
                 }
                 catch (Exception) {
                     throw new ApplicationException(String.Format("Could not parse primary key for {0}", objName), new NullReferenceException());
@@ -227,4 +235,5 @@ namespace CinchORM
             }
         }
     }
+
 }
